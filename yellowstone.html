@@ -183,6 +183,23 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
 .compose-send:disabled{opacity:.4}
 .compose-send:active{opacity:.8}
 .compose-body{flex:1;padding:0 16px;overflow-y:auto}
+/* Photo */
+.compose-photo-area{margin-top:12px}
+.photo-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:14px;border:2px dashed var(--border);border-radius:14px;background:var(--card);color:var(--text2);font-size:16px;cursor:pointer;-webkit-appearance:none}
+.photo-add-btn:active{background:var(--bg)}
+.photo-preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.photo-preview-item{position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden}
+.photo-preview-item img{width:100%;height:100%;object-fit:cover}
+.photo-remove{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none}
+.comment-photos{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.comment-photo{width:120px;height:120px;border-radius:10px;object-fit:cover;cursor:pointer}
+.photo-viewer{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:300;display:none;align-items:center;justify-content:center;padding:16px}
+.photo-viewer.show{display:flex}
+.photo-viewer img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.photo-viewer-close{position:absolute;top:calc(var(--safe-top)+12px);right:12px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:22px;cursor:pointer;-webkit-appearance:none;display:flex;align-items:center;justify-content:center}
+.upload-progress{font-size:13px;color:var(--blue);margin-top:4px;display:none}
+.upload-progress.show{display:block}
+
 .compose-textarea{width:100%;min-height:120px;font-size:17px;line-height:1.6;border:1px solid var(--border);border-radius:14px;padding:14px;resize:none;font-family:inherit;-webkit-appearance:none;background:var(--card)}
 .compose-textarea:focus{outline:none;border-color:var(--green)}
 .compose-tag-section{margin-top:16px}
@@ -327,6 +344,12 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
   <div id="detail-body"></div>
 </div>
 
+<!-- Photo Viewer -->
+<div class="photo-viewer" id="photo-viewer" onclick="closePhotoViewer()">
+  <button class="photo-viewer-close" onclick="closePhotoViewer()">✕</button>
+  <img id="photo-viewer-img" src="">
+</div>
+
 <!-- Compose Overlay -->
 <div class="compose-overlay" id="compose-overlay">
   <div class="compose-header">
@@ -335,7 +358,13 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
     <button class="compose-send" id="compose-send-btn" onclick="sendComment()" disabled>发送</button>
   </div>
   <div class="compose-body">
-    <textarea class="compose-textarea" id="compose-text" placeholder="分享你的见闻、提醒、推荐…" oninput="document.getElementById('compose-send-btn').disabled=!this.value.trim()"></textarea>
+    <textarea class="compose-textarea" id="compose-text" placeholder="分享你的见闻、提醒、推荐…" oninput="updateSendBtn()"></textarea>
+    <div class="compose-photo-area">
+      <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotos(this.files)">
+      <button class="photo-add-btn" onclick="document.getElementById('photo-input').click()">📷 添加照片</button>
+      <div class="photo-preview-grid" id="photo-previews"></div>
+      <div class="upload-progress" id="upload-progress">⏳ 上传中…</div>
+    </div>
     <div class="compose-tag-section">
       <div class="compose-tag-label">📍 标记位置（可选）</div>
       <div class="compose-tag-grid" id="compose-tags"></div>
@@ -721,7 +750,8 @@ function renderForum(){
     const timeStr=formatCommentTime(c.timestamp);
     const pending=c.pending?'<span style="font-size:11px;color:var(--orange);margin-left:6px">⏳ 待同步</span>':'';
     const reactions=renderReactions(c);
-    html+=`<div class="comment-card"><div style="display:flex;align-items:center"><span class="comment-author">${escHtml(c.author)}</span>${tagLabel?`<span class="comment-tag">${tagLabel}</span>`:''}<span class="comment-time">${timeStr}</span>${pending}</div><div class="comment-text">${escHtml(c.text)}</div>${c.location?`<div class="comment-location">📍 ${escHtml(c.location)}</div>`:''}${reactions}</div>`;
+    const photos=c.photos&&c.photos.length?`<div class="comment-photos">${c.photos.map(u=>`<img class="comment-photo" src="${u}" onclick="viewPhoto('${u}')" loading="lazy">`).join('')}</div>`:'';
+    html+=`<div class="comment-card"><div style="display:flex;align-items:center"><span class="comment-author">${escHtml(c.author)}</span>${tagLabel?`<span class="comment-tag">${tagLabel}</span>`:''}<span class="comment-time">${timeStr}</span>${pending}</div>${c.text?`<div class="comment-text">${escHtml(c.text)}</div>`:''}${photos}${c.location?`<div class="comment-location">📍 ${escHtml(c.location)}</div>`:''}${reactions}</div>`;
   });
   document.getElementById('forum-list').innerHTML=html;
 }
@@ -775,7 +805,7 @@ function setForumFilter(f){forumFilter=f;renderForum();}
 
 function openCompose(keepText){
   renderComposeTags();
-  if(!keepText){document.getElementById('compose-text').value='';document.getElementById('compose-send-btn').disabled=true;}
+  if(!keepText){document.getElementById('compose-text').value='';document.getElementById('compose-send-btn').disabled=true;pendingPhotos=[];renderPhotoPreviews();}
   document.getElementById('compose-overlay').classList.add('show');
   setTimeout(()=>document.getElementById('compose-text').focus(),100);
 }
@@ -808,18 +838,27 @@ function updateNameDisplay(){
   if(el)el.textContent=myNickname;
 }
 
-function sendComment(){
+async function sendComment(){
   const text=document.getElementById('compose-text').value.trim();
-  if(!text||!myNickname)return;
+  if((!text&&!pendingPhotos.length)||!myNickname)return;
+  const sendBtn=document.getElementById('compose-send-btn');
+  sendBtn.disabled=true;sendBtn.textContent='发送中…';
+  let photoUrls=[];
+  if(pendingPhotos.length){
+    document.getElementById('upload-progress').classList.add('show');
+    try{photoUrls=await uploadPhotos();}catch(e){console.warn('Photo upload failed:',e);}
+    document.getElementById('upload-progress').classList.remove('show');
+  }
   const comment={
     id:'c_'+Date.now()+'_'+Math.random().toString(36).substr(2,6),
     author:myNickname,
     text:text,
     tag:composeTag,
     timestamp:Date.now(),
+    photos:photoUrls,
     location:null,
     reactions:{},
-    pending:!navigator.onLine
+    pending:!navigator.onLine&&!photoUrls.length
   };
   if(userLat!==null){
     const allStops=ITINERARY.flatMap(d=>d.stops);
@@ -832,9 +871,72 @@ function sendComment(){
   saveComments(comments);
   if(comment.pending){const q=getQueue();q.push(comment);saveQueue(q);}
   else{syncToFirebase(comment);}
+  pendingPhotos=[];
+  sendBtn.textContent='发送';
   closeCompose();
   renderForum();
 }
+
+// ===== PHOTOS =====
+let pendingPhotos=[];
+function updateSendBtn(){
+  const hasText=document.getElementById('compose-text').value.trim();
+  const hasPhotos=pendingPhotos.length>0;
+  document.getElementById('compose-send-btn').disabled=!(hasText||hasPhotos);
+}
+function handlePhotos(files){
+  Array.from(files).forEach(f=>{
+    if(!f.type.startsWith('image/'))return;
+    compressImage(f,1200,0.7).then(blob=>{
+      const url=URL.createObjectURL(blob);
+      pendingPhotos.push({blob,url,name:f.name});
+      renderPhotoPreviews();
+      updateSendBtn();
+    });
+  });
+  document.getElementById('photo-input').value='';
+}
+function compressImage(file,maxDim,quality){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxDim||h>maxDim){const r=Math.min(maxDim/w,maxDim/h);w*=r;h*=r;}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=>resolve(b),'image/jpeg',quality);
+    };
+    img.src=URL.createObjectURL(file);
+  });
+}
+function renderPhotoPreviews(){
+  let html='';
+  pendingPhotos.forEach((p,i)=>{
+    html+=`<div class="photo-preview-item"><img src="${p.url}"><button class="photo-remove" onclick="removePhoto(${i})">✕</button></div>`;
+  });
+  document.getElementById('photo-previews').innerHTML=html;
+}
+function removePhoto(i){pendingPhotos.splice(i,1);renderPhotoPreviews();updateSendBtn();}
+
+async function uploadPhotos(){
+  if(!pendingPhotos.length||typeof firebase==='undefined'||!firebase.storage)return[];
+  const storage=firebase.storage();
+  const urls=[];
+  for(const p of pendingPhotos){
+    const path=`photos/${Date.now()}_${Math.random().toString(36).substr(2,6)}.jpg`;
+    const ref=storage.ref(path);
+    await ref.put(p.blob,{contentType:'image/jpeg'});
+    const url=await ref.getDownloadURL();
+    urls.push(url);
+  }
+  return urls;
+}
+
+function viewPhoto(url){
+  document.getElementById('photo-viewer-img').src=url;
+  document.getElementById('photo-viewer').classList.add('show');
+}
+function closePhotoViewer(){document.getElementById('photo-viewer').classList.remove('show');}
 
 // ===== FIREBASE SYNC =====
 let db=null,firebaseReady=false;
@@ -910,7 +1012,9 @@ renderCountdown();renderDayList();initLocation();updateSyncBadge();
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async onload="onLeafletReady()"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" async onload="
-  var s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';s.async=true;s.onload=function(){initFirebase();};document.body.appendChild(s);
+  var loaded=0,total=2;function checkReady(){loaded++;if(loaded>=total)initFirebase();}
+  var s1=document.createElement('script');s1.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';s1.async=true;s1.onload=checkReady;document.body.appendChild(s1);
+  var s2=document.createElement('script');s2.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js';s2.async=true;s2.onload=checkReady;document.body.appendChild(s2);
 "></script>
 </body>
 </html>
