@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="黄石助手">
+<meta name="theme-color" content="#2c6e49">
+<title>黄石助手 - 大提顿 & 黄石 10天自驾</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
+<style>
+:root{--green:#2c6e49;--green-light:#4c956c;--blue:#2980ef;--orange:#e8860c;--red:#e74c3c;--amber:#f39c12;--teal:#1abc9c;--purple:#8e44ad;--indigo:#5856d6;--bg:#f0f2f0;--card:#fff;--text:#1c1c1e;--text2:#6b7280;--text3:#9ca3af;--border:#e5e7eb;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--tab-h:64px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100dvh;position:fixed;width:100%}
+.app{display:flex;flex-direction:column;height:100dvh}
+.tab-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab-h)+var(--safe-bottom)+8px)}
+.tab-bar{display:flex;background:rgba(255,255,255,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--border);padding-bottom:var(--safe-bottom);position:fixed;bottom:0;left:0;right:0;z-index:100;height:calc(var(--tab-h)+var(--safe-bottom))}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;cursor:pointer;color:var(--text2);font-size:11px;border:none;background:none;-webkit-appearance:none;transition:color .2s}
+.tab-item.active{color:var(--green)}
+.tab-item .icon{font-size:24px;margin-bottom:2px}
+.page{display:none;padding-top:calc(var(--safe-top)+8px)}
+.page.active{display:block}
+.page-scroll{padding:16px}
+.page-title{font-size:34px;font-weight:800;margin-bottom:16px;padding:0 16px 0;color:var(--green)}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.section-title{font-size:20px;font-weight:700;margin-bottom:12px}
+
+/* Countdown */
+.countdown-card{background:linear-gradient(135deg,#2c6e49,#1a472a);border-radius:20px;padding:24px;color:#fff;margin:0 16px 16px;text-align:center}
+.countdown-label{font-size:16px;opacity:.8;margin-bottom:4px}
+.countdown-number{font-size:56px;font-weight:800}
+.countdown-unit{font-size:18px;opacity:.8}
+.countdown-dates{font-size:15px;opacity:.7;margin-top:8px}
+
+/* Smart Suggestion */
+.suggest-card{margin:0 16px 14px;padding:16px;border-radius:16px;background:linear-gradient(135deg,#2980ef,#3498db);color:#fff;display:none;animation:slideDown .3s ease}
+.suggest-card.show{display:block}
+.suggest-icon{font-size:28px;margin-bottom:6px}
+.suggest-msg{font-size:16px;line-height:1.5;white-space:pre-line}
+@keyframes slideDown{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* Day Card */
+.day-card{margin:0 16px 14px;cursor:pointer;transition:transform .15s}
+.day-card:active{transform:scale(.98)}
+.day-card.today-card{border:2px solid var(--blue);background:rgba(41,128,239,.03)}
+.day-card.past-card{opacity:.55}
+.day-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.day-badge{color:#fff;font-size:14px;font-weight:700;min-width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0 6px}
+.day-badge.future{background:var(--green)}
+.day-badge.today{background:var(--blue)}
+.day-badge.past{background:var(--text3)}
+.today-label{font-size:13px;font-weight:600;color:var(--blue);margin-left:4px}
+.day-title{font-size:18px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day-date{font-size:14px;color:var(--text2);margin-top:1px}
+.day-subtitle{font-size:15px;color:var(--text2);margin-bottom:8px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day-info{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text2)}
+.day-info-item{display:flex;align-items:center;gap:3px}
+.park-label{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:6px}
+.park-teton{background:#e0f2f1;color:#00695c}
+.park-yellowstone{background:#fff3e0;color:#e65100}
+.park-other{background:#e3f2fd;color:#1565c0}
+/* Stop preview */
+.stop-preview{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.stop-preview::-webkit-scrollbar{display:none}
+.stop-pill{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;font-size:13px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.stop-more{font-size:13px;color:var(--text2);padding:4px 8px;display:flex;align-items:center}
+.accom-preview{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:14px;color:var(--indigo)}
+.day-highlights{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hl-tag{font-size:13px;padding:3px 10px;border-radius:20px;background:var(--green);color:#fff;opacity:.85}
+
+/* MAP TAB */
+#map-container{height:calc(100dvh - var(--tab-h) - var(--safe-bottom) - var(--safe-top) - 8px);width:100%;position:relative}
+.map-controls{position:absolute;top:12px;right:12px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+.map-btn{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.95);border:none;font-size:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;-webkit-appearance:none;backdrop-filter:blur(10px)}
+.map-btn:active{background:rgba(230,230,230,.95)}
+.day-filter-btn{position:absolute;top:12px;left:12px;z-index:1000;display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px;background:rgba(255,255,255,.95);border:none;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);-webkit-appearance:none;backdrop-filter:blur(10px)}
+.day-filter-sheet{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1100;background:rgba(0,0,0,.4);display:none;align-items:flex-end}
+.day-filter-sheet.show{display:flex}
+.day-filter-body{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-height:70%;overflow-y:auto;padding:20px 16px calc(var(--safe-bottom)+16px)}
+.day-filter-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:.5px solid var(--border);cursor:pointer}
+.day-filter-item:last-child{border-bottom:none}
+
+/* Detail Overlay */
+.detail-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:150;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-top:calc(var(--safe-top)+16px)}
+.detail-overlay.show{display:block}
+.detail-back{display:inline-flex;align-items:center;gap:4px;font-size:18px;color:var(--green);background:none;border:none;cursor:pointer;margin-bottom:16px;padding:8px 0;-webkit-appearance:none}
+
+/* Stop Timeline */
+.stop-timeline{position:relative}
+.timeline-item{display:flex;gap:14px;margin-bottom:0;padding-bottom:16px;cursor:pointer}
+.timeline-item:active{opacity:.8}
+.timeline-left{display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0}
+.timeline-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.timeline-line{flex:1;width:2px;background:var(--border);margin-top:4px}
+.timeline-content{flex:1;padding-bottom:4px}
+.tl-name{font-size:17px;font-weight:600}
+.tl-name-en{font-size:13px;color:var(--text2)}
+.tl-desc{font-size:14px;color:var(--text2);line-height:1.4;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tl-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;font-size:13px;color:var(--text2)}
+.tl-trail{font-size:13px;color:var(--green);background:rgba(44,110,73,.08);padding:4px 8px;border-radius:6px;margin-top:4px;display:inline-block}
+.tl-distance{color:var(--blue);font-weight:600}
+
+/* Accommodation card */
+.accom-card{background:linear-gradient(135deg,#2c6e49,#4c956c);border-radius:16px;padding:16px;color:#fff;margin-bottom:14px}
+.accom-name{font-size:18px;font-weight:700;margin-bottom:8px}
+.accom-row{display:flex;align-items:center;gap:8px;font-size:15px;opacity:.9;margin-top:4px}
+.accom-row a{color:#fff;text-decoration:none}
+
+/* Stop Detail (full) */
+.stop-detail-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:160;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-top:calc(var(--safe-top)+16px)}
+.stop-detail-overlay.show{display:block}
+.stop-mini-map{height:200px;border-radius:12px;margin-bottom:14px;overflow:hidden}
+.trail-grid{display:flex;gap:12px;margin-top:12px}
+.trail-item{flex:1;text-align:center;padding:12px 8px;background:rgba(44,110,73,.08);border-radius:12px}
+.trail-value{font-size:18px;font-weight:700;color:var(--green)}
+.trail-label{font-size:13px;color:var(--text2);margin-top:2px}
+.stop-tips{font-size:15px;color:var(--orange);background:rgba(232,134,12,.08);padding:12px;border-radius:12px;margin-top:12px;line-height:1.5}
+.nav-btn{display:inline-flex;align-items:center;gap:6px;font-size:16px;font-weight:600;color:#fff;background:var(--blue);padding:12px 20px;border-radius:12px;border:none;cursor:pointer;margin-top:12px;-webkit-appearance:none;width:100%;justify-content:center}
+.nav-btn:active{opacity:.8}
+
+/* POI Tab */
+.poi-cat-bar{overflow-x:auto;white-space:nowrap;margin:0 -16px;padding:0 16px 12px;-webkit-overflow-scrolling:touch}
+.poi-chip{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:20px;font-size:15px;font-weight:500;cursor:pointer;border:none;margin-right:8px;-webkit-appearance:none}
+.poi-chip.active{color:#fff!important}
+.poi-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--border);cursor:pointer}
+.poi-item:active{opacity:.8}
+.poi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.poi-name{font-size:17px;font-weight:500}
+.poi-detail{font-size:14px;color:var(--text2);margin-top:2px}
+.poi-right{margin-left:auto;text-align:right;flex-shrink:0}
+.poi-dist{font-size:16px;font-weight:700;color:var(--blue)}
+.poi-hours{font-size:13px;color:var(--text2)}
+.poi-signal{font-size:12px;margin-top:2px}
+.no-location{text-align:center;padding:60px 20px;color:var(--text2)}
+.no-location .big-icon{font-size:56px;margin-bottom:12px}
+.loc-btn{display:inline-flex;align-items:center;gap:6px;font-size:17px;font-weight:600;color:#fff;background:var(--blue);padding:12px 24px;border-radius:12px;border:none;cursor:pointer;margin-top:16px;-webkit-appearance:none}
+
+/* Settings */
+.emergency-card{background:linear-gradient(135deg,#c0392b,#e74c3c);border-radius:16px;padding:16px;color:#fff;margin-bottom:14px}
+.emergency-title{font-size:18px;font-weight:700;margin-bottom:10px}
+.emergency-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:16px}
+.emergency-call{background:rgba(255,255,255,.2);padding:4px 12px;border-radius:8px;font-weight:600;text-decoration:none;color:#fff}
+.safety-item{font-size:16px;color:var(--text2);padding:4px 0;line-height:1.5}
+.safety-item::before{content:"⚠️ "}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:.5px solid var(--border);font-size:17px}
+.setting-row:last-child{border-bottom:none}
+.setting-value{color:var(--text2);font-size:15px}
+.maps-tip{font-size:14px;color:var(--blue);background:rgba(41,128,239,.06);padding:12px;border-radius:12px;line-height:1.5;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="tab-content">
+  <!-- MAP -->
+  <div id="page-map" class="page">
+    <div id="map-container">
+      <button class="day-filter-btn" id="day-filter-btn" onclick="toggleDayFilter()">🗓️ <span id="filter-label">全部</span></button>
+      <div class="map-controls">
+        <button class="map-btn" id="map-locate-btn" onclick="locateMe()">📍</button>
+        <button class="map-btn" id="map-style-btn" onclick="toggleMapStyle()">🗺️</button>
+      </div>
+      <div id="leaflet-map" style="height:100%;width:100%"></div>
+      <div class="day-filter-sheet" id="day-filter-sheet" onclick="closeDayFilter(event)">
+        <div class="day-filter-body" onclick="event.stopPropagation()">
+          <div style="font-size:20px;font-weight:700;margin-bottom:12px">选择日期</div>
+          <div id="day-filter-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ITINERARY -->
+  <div id="page-itinerary" class="page active">
+    <div class="page-title">🏔️ 黄石助手</div>
+    <div id="countdown"></div>
+    <div id="suggest-card" class="suggest-card"></div>
+    <div id="day-list"></div>
+  </div>
+
+  <!-- POI -->
+  <div id="page-poi" class="page">
+    <div class="page-title">📍 附近设施</div>
+    <div class="page-scroll">
+      <div class="poi-cat-bar" id="poi-filters"></div>
+      <div id="poi-list"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="page-settings" class="page">
+    <div class="page-title">⚙️ 设置</div>
+    <div class="page-scroll">
+      <div class="card">
+        <div class="section-title">📱 离线地图建议</div>
+        <p style="font-size:15px;color:var(--text2);line-height:1.5">园区内手机信号非常差，建议提前下载离线地图：</p>
+        <div class="maps-tip">💡 iPhone: 设置 → 地图 → 离线地图 → 分别搜索下载「Yellowstone」和「Grand Teton」区域</div>
+        <div style="margin-top:12px;font-size:14px;color:var(--text2)">
+          <div style="padding:4px 0">🗺️ 盐湖城 → 杰克逊</div>
+          <div style="padding:4px 0">🗺️ 大提顿国家公园</div>
+          <div style="padding:4px 0">🗺️ 黄石国家公园</div>
+          <div style="padding:4px 0">🗺️ 西黄石 & 周边</div>
+          <div style="padding:4px 0">🗺️ 黄石 → 盐湖城 (返程)</div>
+        </div>
+      </div>
+      <div class="emergency-card">
+        <div class="emergency-title">🚨 紧急联系</div>
+        <div class="emergency-row"><span>紧急求救</span><a href="tel:911" class="emergency-call">📞 911</a></div>
+        <div class="emergency-row"><span>黄石紧急电话</span><a href="tel:+13073447381" class="emergency-call">📞 307-344-7381</a></div>
+        <div class="emergency-row"><span>大提顿紧急电话</span><a href="tel:+13077393300" class="emergency-call">📞 307-739-3300</a></div>
+        <div class="emergency-row"><span>Jackson 医院</span><a href="tel:+13077333636" class="emergency-call">📞 307-733-3636</a></div>
+        <div class="emergency-row"><span>道路救援 AAA</span><a href="tel:+18002224357" class="emergency-call">📞 800-222-4357</a></div>
+      </div>
+      <div class="card">
+        <div class="section-title" style="color:var(--red)">🐻 安全提醒</div>
+        <div class="safety-item">遇到野牛保持至少25码（23米）距离</div>
+        <div class="safety-item">遇到熊/狼保持至少100码（91米）距离</div>
+        <div class="safety-item">随身携带防熊喷雾（Bear Spray）</div>
+        <div class="safety-item">不要单独在步道上徒步</div>
+        <div class="safety-item">不要接近或喂食任何野生动物</div>
+        <div class="safety-item">温泉区域必须走栈道，地表不稳定</div>
+        <div class="safety-item">徒步时制造噪音，避免惊吓到熊</div>
+        <div class="safety-item">随身带足饮用水，园内补给点有限</div>
+        <div class="safety-item">注意天气变化，山区随时可能下雨降温</div>
+      </div>
+      <div class="card" id="trip-info"></div>
+      <div class="card">
+        <div class="setting-row"><span>版本</span><span class="setting-value">1.0.0 (Web)</span></div>
+        <div class="setting-row"><span>系统</span><span class="setting-value">iOS 17+ / Web</span></div>
+        <div style="font-size:13px;color:var(--text3);text-align:center;padding-top:8px">黄石助手 — 您的黄石 & 大提顿旅行伴侣<br>所有数据均存储在本地，无需网络即可使用</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-item" onclick="switchTab('map')"><span class="icon">🗺️</span>地图</button>
+  <button class="tab-item active" onclick="switchTab('itinerary')"><span class="icon">🗓️</span>行程</button>
+  <button class="tab-item" onclick="switchTab('poi')"><span class="icon">📍</span>附近</button>
+  <button class="tab-item" onclick="switchTab('settings')"><span class="icon">⚙️</span>设置</button>
+</div>
+</div>
+
+<!-- Day Detail Overlay -->
+<div class="detail-overlay" id="detail-overlay">
+  <button class="detail-back" onclick="closeDetail()">‹ 返回行程</button>
+  <div id="detail-body"></div>
+</div>
+
+<!-- Stop Detail Overlay -->
+<div class="stop-detail-overlay" id="stop-detail-overlay">
+  <button class="detail-back" onclick="closeStopDetail()">‹ 返回</button>
+  <div id="stop-detail-body"></div>
+</div>
+
+<script>
+const ITINERARY=[{"id":"day1","dayNumber":1,"date":"2026-07-03","parkName":"大提顿国家公园","title":"抵达 SLC → 杰克逊 (Jackson)","subtitle":"抵达盐湖城，前往杰克逊小镇","startLocation":{"name":"盐湖城国际机场 (SLC)","latitude":40.7899,"longitude":-111.9791},"endLocation":{"name":"杰克逊小镇","latitude":43.4799,"longitude":-110.7624},"drivingDistanceMiles":280,"drivingTimeHours":4.5,"accommodation":{"name":"Homewood Suites by Hilton Jackson","address":"260 N Millward St, Jackson, WY 83001","latitude":43.4814,"longitude":-110.7601,"phone":"+1-307-739-0808","checkIn":"15:00","notes":"含早餐，有停车位"},"stops":[{"id":"d1s1","name":"盐湖城国际机场","nameEn":"Salt Lake City International Airport","description":"抵达盐湖城国际机场，取车","latitude":40.7899,"longitude":-111.9791,"type":"town","estimatedMinutes":60,"tips":"建议租SUV或大型车辆，山路较多。提前在机场加满油。","trailInfo":null,"order":1},{"id":"d1s2","name":"杰克逊小镇","nameEn":"Jackson Town Square","description":"傍晚抵达杰克逊小镇，入住酒店后逛小镇，享用晚餐。小镇中心有著名的鹿角拱门。","latitude":43.4799,"longitude":-110.7624,"type":"town","estimatedMinutes":120,"tips":"推荐在小镇广场附近的餐厅用餐。可以逛逛当地画廊和纪念品店。","trailInfo":null,"order":2}],"highlights":["鹿角拱门广场","杰克逊小镇晚餐"]},{"id":"day2","dayNumber":2,"date":"2026-07-04","parkName":"大提顿国家公园","title":"大提顿经典一日游","subtitle":"Oxbow Bend 日出、Mormon Row、Jenny Lake 徒步","startLocation":{"name":"杰克逊小镇","latitude":43.4799,"longitude":-110.7624},"endLocation":{"name":"杰克逊小镇","latitude":43.4799,"longitude":-110.7624},"drivingDistanceMiles":60,"drivingTimeHours":2,"accommodation":{"name":"Homewood Suites by Hilton Jackson","address":"260 N Millward St, Jackson, WY 83001","latitude":43.4814,"longitude":-110.7601,"phone":"+1-307-739-0808","checkIn":null,"notes":null},"stops":[{"id":"d2s1","name":"Oxbow Bend 日出","nameEn":"Oxbow Bend Turnout","description":"经典日出拍摄点，可以拍到提顿山脉倒映在蛇河中的壮丽景色。建议日出前30分钟到达。","latitude":43.8635,"longitude":-110.534,"type":"scenic","estimatedMinutes":45,"tips":"日出时间约5:40AM。带三脚架拍摄倒影。可能看到鹈鹕、河狸和驼鹿。","trailInfo":null,"order":1},{"id":"d2s2","name":"Schwabacher Landing","nameEn":"Schwabacher Landing","description":"另一个经典拍摄点，可以看到提顿山脉倒映在平静的河水中。","latitude":43.7167,"longitude":-110.6667,"type":"scenic","estimatedMinutes":30,"tips":"需要走一小段土路到达。早晨光线最佳。","trailInfo":null,"order":2},{"id":"d2s3","name":"Mormon Row 经典木屋","nameEn":"Mormon Row Historic District","description":"历史悠久的定居点，著名的T.A. Moulton谷仓是大提顿最经典的拍照点之一。","latitude":43.6641,"longitude":-110.6617,"type":"scenic","estimatedMinutes":30,"tips":"日出拍摄木屋与提顿山脉的组合是经典构图。附近常有野牛群。","trailInfo":null,"order":3},{"id":"d2s4","name":"Jenny Lake","nameEn":"Jenny Lake","description":"大提顿最受欢迎的景点。可以乘坐渡船横跨湖面，或沿湖徒步。","latitude":43.7533,"longitude":-110.7263,"type":"lake","estimatedMinutes":60,"tips":"渡船往返$20/人，单程$12。游船可节省约2英里步行。建议乘船去，徒步回。","trailInfo":null,"order":4},{"id":"d2s5","name":"Hidden Falls 瀑布","nameEn":"Hidden Falls","description":"从Jenny Lake渡船码头出发，短途徒步即可到达的壮观瀑布。","latitude":43.758,"longitude":-110.744,"type":"waterfall","estimatedMinutes":45,"tips":"从渡船西岸码头步行约0.5英里即到。瀑布落差约200英尺。","trailInfo":{"distanceMiles":1.0,"roundTrip":true,"difficulty":"简单","durationHours":0.5},"order":5},{"id":"d2s6","name":"Inspiration Point 观景台","nameEn":"Inspiration Point","description":"从Hidden Falls继续上行，到达观景台可以俯瞰整个Jenny Lake和提顿谷地。","latitude":43.761,"longitude":-110.745,"type":"viewpoint","estimatedMinutes":60,"tips":"从Hidden Falls继续步行约0.5英里上坡。观景台视野开阔，可以看到整个Jackson Hole山谷。","trailInfo":{"distanceMiles":1.8,"roundTrip":true,"difficulty":"中等","durationHours":1.5},"order":6}],"highlights":["Oxbow Bend 日出拍摄","Mormon Row 经典木屋","Jenny Lake + Hidden Falls 徒步"]},{"id":"day3","dayNumber":3,"date":"2026-07-05","parkName":"大提顿国家公园","title":"大提顿深度游 → 黄石南门","subtitle":"Jackson Lake、Colter Bay、Signal Mountain → 进入黄石","startLocation":{"name":"杰克逊小镇","latitude":43.4799,"longitude":-110.7624},"endLocation":{"name":"Canyon Lodge","latitude":44.734,"longitude":-110.4869},"drivingDistanceMiles":50,"drivingTimeHours":1.5,"accommodation":{"name":"Canyon Lodge (园内)","address":"Canyon Village, Yellowstone National Park, WY 82190","latitude":44.734,"longitude":-110.4869,"phone":"+1-307-344-7311","checkIn":"16:00","notes":"黄石园内住宿，提前预订。餐厅在Lodge内。"},"stops":[{"id":"d3s1","name":"Jackson Lake Dam","nameEn":"Jackson Lake Dam","description":"Jackson Lake的大坝，可以观赏到湖面与提顿山脉的壮观景色。","latitude":43.8558,"longitude":-110.5928,"type":"scenic","estimatedMinutes":20,"tips":"大坝上可以拍到Mt. Moran的经典角度。","trailInfo":null,"order":1},{"id":"d3s2","name":"Colter Bay","nameEn":"Colter Bay Village","description":"有游客中心、商店和餐厅。Lakeshore Trail是一条轻松的湖边步道。","latitude":43.9044,"longitude":-110.6406,"type":"lake","estimatedMinutes":45,"tips":"游客中心有印第安艺术品展览。可以在这里补给水和食物。","trailInfo":null,"order":2},{"id":"d3s3","name":"Signal Mountain 观景台","nameEn":"Signal Mountain Summit","description":"开车到山顶，可以360度俯瞰Jackson Hole山谷、提顿山脉和Jackson Lake。","latitude":43.8431,"longitude":-110.5847,"type":"viewpoint","estimatedMinutes":30,"tips":"单程约5英里山路，道路狭窄但铺装良好。山顶有两个观景台。","trailInfo":null,"order":3},{"id":"d3s4","name":"黄石南门入口","nameEn":"Yellowstone South Entrance","description":"从大提顿进入黄石国家公园的南门。继续向北前往Canyon Village。","latitude":44.1336,"longitude":-110.6655,"type":"scenic","estimatedMinutes":15,"tips":"门票$35/车，7天有效。保留好票据。建议在入口拍照留念。","trailInfo":null,"order":4}],"highlights":["Signal Mountain 360度全景","进入黄石国家公园"]},{"id":"day4","dayNumber":4,"date":"2026-07-06","parkName":"黄石国家公园","title":"南门进入 → 黄石 → Canyon Lodge","subtitle":"Lewis Falls、West Thumb、Yellowstone Lake、Hayden Valley","startLocation":{"name":"Canyon Lodge","latitude":44.734,"longitude":-110.4869},"endLocation":{"name":"Canyon Lodge","latitude":44.734,"longitude":-110.4869},"drivingDistanceMiles":100,"drivingTimeHours":2.5,"accommodation":{"name":"Canyon Lodge (园内)","address":"Canyon Village, Yellowstone National Park, WY 82190","latitude":44.734,"longitude":-110.4869,"phone":"+1-307-344-7311","checkIn":null,"notes":null},"stops":[{"id":"d4s1","name":"Lewis Falls","nameEn":"Lewis Falls","description":"从南门进入后不远处的瀑布，从路边即可观赏。","latitude":44.185,"longitude":-110.65,"type":"waterfall","estimatedMinutes":15,"tips":"路边停车即可观赏，不需要徒步。","trailInfo":null,"order":1},{"id":"d4s2","name":"West Thumb Geyser Basin","nameEn":"West Thumb Geyser Basin","description":"位于黄石湖边的间歇泉盆地，有多个温泉和间歇泉直接在湖边。","latitude":44.4158,"longitude":-110.5712,"type":"geyser","estimatedMinutes":45,"tips":"步道环线约0.6英里，平坦易走。可以看到温泉直接注入黄石湖。","trailInfo":{"distanceMiles":0.6,"roundTrip":true,"difficulty":"简单","durationHours":0.5},"order":2},{"id":"d4s3","name":"Yellowstone Lake 湖边漫步","nameEn":"Yellowstone Lake","description":"北美最大的高海拔湖泊之一，湖面海拔7,733英尺。","latitude":44.4502,"longitude":-110.387,"type":"lake","estimatedMinutes":30,"tips":"Lake Village有商店和餐厅。湖水很冷，不适合游泳。","trailInfo":null,"order":3},{"id":"d4s4","name":"Hayden Valley 野生动物观赏","nameEn":"Hayden Valley","description":"黄石最佳野生动物观赏区之一，常见野牛群、灰熊和狼。傍晚是最佳观赏时间。","latitude":44.65,"longitude":-110.45,"type":"wildlife","estimatedMinutes":60,"tips":"傍晚时分最容易看到动物。带望远镜。与野牛保持至少25码距离，与熊保持100码。","trailInfo":null,"order":4},{"id":"d4s5","name":"Mud Volcano","nameEn":"Mud Volcano Area","description":"泥火山区域，有沸腾的泥浆池和蒸汽喷口，景象独特。","latitude":44.6272,"longitude":-110.4333,"type":"geyser","estimatedMinutes":30,"tips":"步道约0.6英里环线。Dragon's Mouth Spring最为壮观。气味较重（硫磺）。","trailInfo":{"distanceMiles":0.6,"roundTrip":true,"difficulty":"简单","durationHours":0.5},"order":5}],"highlights":["West Thumb 湖边温泉","Hayden Valley 傍晚看野牛和熊","Mud Volcano 泥火山"]},{"id":"day5","dayNumber":5,"date":"2026-07-07","parkName":"黄石国家公园","title":"峡谷区 → 北环 → Lamar Valley → 西黄石","subtitle":"Artist Point、Upper & Lower Falls、Tower Fall、Lamar Valley、Mammoth Hot Springs","startLocation":{"name":"Canyon Lodge","latitude":44.734,"longitude":-110.4869},"endLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"drivingDistanceMiles":120,"drivingTimeHours":3.5,"accommodation":{"name":"Holiday Inn West Yellowstone","address":"315 Yellowstone Ave, West Yellowstone, MT 59758","latitude":44.6617,"longitude":-111.0978,"phone":"+1-406-646-7365","checkIn":"15:00","notes":"西黄石镇上，周边有餐厅和商店"},"stops":[{"id":"d5s1","name":"Artist Point 观景台","nameEn":"Artist Point","description":"黄石大峡谷最著名的观景点，可以看到Lower Falls瀑布和色彩斑斓的峡谷壁。","latitude":44.72,"longitude":-110.47,"type":"viewpoint","estimatedMinutes":30,"tips":"上午光线最佳拍摄。这是黄石最经典的拍摄角度之一。","trailInfo":null,"order":1},{"id":"d5s2","name":"Upper Falls & Lower Falls","nameEn":"Upper and Lower Falls of Yellowstone","description":"Upper Falls落差109英尺，Lower Falls落差308英尺（黄石最大瀑布）。","latitude":44.7178,"longitude":-110.4958,"type":"waterfall","estimatedMinutes":45,"tips":"Uncle Tom's Trail可以近距离观看Lower Falls，但需要爬300多级台阶。Brink of Upper Falls步道较轻松。","trailInfo":{"distanceMiles":1.0,"roundTrip":true,"difficulty":"中等","durationHours":1.0},"order":2},{"id":"d5s3","name":"Tower Fall","nameEn":"Tower Fall","description":"132英尺高的瀑布，被岩石尖塔环绕，景色独特。","latitude":44.8925,"longitude":-110.3878,"type":"waterfall","estimatedMinutes":20,"tips":"观景台在停车场旁，很容易到达。Tower一般商店有小食和纪念品。","trailInfo":null,"order":3},{"id":"d5s4","name":"Roosevelt","nameEn":"Roosevelt Lodge","description":"以老罗斯福总统命名的区域，有骑马和马车体验。","latitude":44.9136,"longitude":-110.4067,"type":"scenic","estimatedMinutes":20,"tips":"可以预约Old West Cookout晚餐体验。","trailInfo":null,"order":4},{"id":"d5s5","name":"Lamar Valley 野生动物观赏","nameEn":"Lamar Valley","description":"被称为「美国的塞伦盖蒂」，是黄石最佳的野生动物观赏区。野牛、狼、灰熊、叉角羚常见。","latitude":44.8969,"longitude":-110.1731,"type":"wildlife","estimatedMinutes":90,"tips":"清晨和傍晚是最佳观赏时间。带望远镜和长焦镜头。这里是看狼的最佳地点。","trailInfo":null,"order":5},{"id":"d5s6","name":"Mammoth Hot Springs 猛犸热泉","nameEn":"Mammoth Hot Springs","description":"独特的石灰华台地，由热泉沉积形成的白色和橙色梯田状地貌。","latitude":44.9688,"longitude":-110.7047,"type":"hot_spring","estimatedMinutes":60,"tips":"分上下两个步道区。Upper Terrace Drive可以开车。常有麋鹿在停车场附近活动。","trailInfo":{"distanceMiles":1.5,"roundTrip":true,"difficulty":"简单","durationHours":1.0},"order":6},{"id":"d5s7","name":"Norris Geyser Basin","nameEn":"Norris Geyser Basin","description":"黄石最热、最古老、最活跃的间歇泉区。Steamboat Geyser是世界最高的活跃间歇泉。","latitude":44.7261,"longitude":-110.7039,"type":"geyser","estimatedMinutes":60,"tips":"分Porcelain Basin和Back Basin两个区域。Porcelain Basin较短但景色壮观。Steamboat喷发不可预测。","trailInfo":{"distanceMiles":2.0,"roundTrip":true,"difficulty":"简单","durationHours":1.0},"order":7}],"highlights":["Artist Point 黄石大峡谷经典角度","Lamar Valley 看狼","Mammoth Hot Springs 梯田热泉"]},{"id":"day6","dayNumber":6,"date":"2026-07-08","parkName":"黄石国家公园","title":"间歇泉区深度游","subtitle":"Old Faithful、Morning Glory、Biscuit Basin、Grand Prismatic、Fairy Falls","startLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"endLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"drivingDistanceMiles":60,"drivingTimeHours":2,"accommodation":{"name":"Holiday Inn West Yellowstone","address":"315 Yellowstone Ave, West Yellowstone, MT 59758","latitude":44.6617,"longitude":-111.0978,"phone":"+1-406-646-7365","checkIn":null,"notes":null},"stops":[{"id":"d6s1","name":"Old Faithful 老忠实间歇泉","nameEn":"Old Faithful Geyser","description":"黄石最著名的间歇泉，约每90分钟喷发一次，每次持续2-5分钟，高度可达130-180英尺。","latitude":44.4605,"longitude":-110.8281,"type":"geyser","estimatedMinutes":90,"tips":"游客中心有下次喷发预测时间（±10分钟）。提前20分钟找好位置。Old Faithful Inn是国家历史地标，值得参观。","trailInfo":null,"order":1},{"id":"d6s2","name":"Old Faithful Inn","nameEn":"Old Faithful Inn","description":"世界上最大的原木建筑之一，建于1904年。即使不住宿也值得进去参观大厅。","latitude":44.46,"longitude":-110.831,"type":"museum","estimatedMinutes":30,"tips":"大厅的石砌壁炉高达85英尺。二楼有观景台可以看Old Faithful喷发。","trailInfo":null,"order":2},{"id":"d6s3","name":"Morning Glory Pool","nameEn":"Morning Glory Pool","description":"色彩鲜艳的温泉池，因形状酷似牵牛花而得名。沿Upper Geyser Basin步道可达。","latitude":44.4744,"longitude":-110.8417,"type":"hot_spring","estimatedMinutes":20,"tips":"从Old Faithful沿步道向北约1.4英里。沿途还有很多其他间歇泉和温泉。","trailInfo":null,"order":3},{"id":"d6s4","name":"Biscuit Basin","nameEn":"Biscuit Basin","description":"小巧精致的间歇泉盆地，有Sapphire Pool等色彩鲜艳的温泉。","latitude":44.4852,"longitude":-110.8547,"type":"geyser","estimatedMinutes":30,"tips":"步道环线约0.6英里，平坦易走。Sapphire Pool的蓝色非常纯净。","trailInfo":{"distanceMiles":0.6,"roundTrip":true,"difficulty":"简单","durationHours":0.5},"order":4},{"id":"d6s5","name":"Black Sand Basin","nameEn":"Black Sand Basin","description":"以黑色火山沙为特色的间歇泉盆地，有Emerald Pool和Rainbow Pool。","latitude":44.4648,"longitude":-110.8453,"type":"geyser","estimatedMinutes":20,"tips":"很小的区域，停车方便。Emerald Pool的绿色非常漂亮。","trailInfo":null,"order":5},{"id":"d6s6","name":"大棱镜温泉 (Grand Prismatic)","nameEn":"Grand Prismatic Spring","description":"美国最大的温泉，也是世界第三大温泉。直径约370英尺，以其鲜艳的彩虹色环而闻名。","latitude":44.5251,"longitude":-110.8381,"type":"hot_spring","estimatedMinutes":45,"tips":"步道平坦但蒸汽很大。要看到完整的彩虹色需要从上方俯瞰。","trailInfo":{"distanceMiles":0.8,"roundTrip":true,"difficulty":"简单","durationHours":0.5},"order":6},{"id":"d6s7","name":"Fairy Falls Trailhead 俯瞰大棱镜","nameEn":"Fairy Falls Trail / Grand Prismatic Overlook","description":"从Fairy Falls步道上的观景台可以俯瞰大棱镜温泉的全貌，是拍摄大棱镜的最佳角度。","latitude":44.5287,"longitude":-110.8472,"type":"hike","estimatedMinutes":60,"tips":"往返约1-1.5英里到观景台。继续前行可到Fairy Falls瀑布（单程约2.5英里）。上午光线最佳。","trailInfo":{"distanceMiles":1.5,"roundTrip":true,"difficulty":"简单","durationHours":1.0},"order":7}],"highlights":["Old Faithful 喷发","Grand Prismatic 大棱镜温泉","Fairy Falls 俯瞰大棱镜"]},{"id":"day7","dayNumber":7,"date":"2026-07-09","parkName":"黄石国家公园","title":"休闲日 / 补漏","subtitle":"Grizzly Center、IMAX、Firehole Lake Drive、Gibbon Falls","startLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"endLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"drivingDistanceMiles":30,"drivingTimeHours":1,"accommodation":{"name":"Holiday Inn West Yellowstone","address":"315 Yellowstone Ave, West Yellowstone, MT 59758","latitude":44.6617,"longitude":-111.0978,"phone":"+1-406-646-7365","checkIn":null,"notes":null},"stops":[{"id":"d7s1","name":"Grizzly & Wolf Discovery Center","nameEn":"Grizzly & Wolf Discovery Center","description":"在西黄石镇上的野生动物保护中心，可以近距离观察灰熊和灰狼。","latitude":44.6563,"longitude":-111.0884,"type":"museum","estimatedMinutes":90,"tips":"门票约$15。如果在公园内没看到熊和狼，这里是保底选择。上午喂食时间最活跃。","trailInfo":null,"order":1},{"id":"d7s2","name":"Yellowstone IMAX 影院","nameEn":"Yellowstone Giant Screen Theatre","description":"观看黄石主题的IMAX电影，了解公园的地质和历史。雨天的好去处。","latitude":44.6585,"longitude":-111.0942,"type":"museum","estimatedMinutes":60,"tips":"电影约45分钟。适合休息日或下雨天。","trailInfo":null,"order":2},{"id":"d7s3","name":"Firehole Lake Drive","nameEn":"Firehole Lake Drive","description":"单行道环路，沿途有多个间歇泉和温泉，包括Great Fountain Geyser。","latitude":44.54,"longitude":-110.82,"type":"drive","estimatedMinutes":30,"tips":"Great Fountain Geyser每11小时喷发一次，如果时间合适值得等待。","trailInfo":null,"order":3},{"id":"d7s4","name":"Fountain Paint Pot","nameEn":"Fountain Paint Pot","description":"集合了黄石四种地热特征：间歇泉、温泉、泥浆池和蒸汽喷口。","latitude":44.5372,"longitude":-110.8092,"type":"geyser","estimatedMinutes":30,"tips":"步道环线约0.5英里。可以看到彩色泥浆池冒泡的有趣景象。","trailInfo":{"distanceMiles":0.5,"roundTrip":true,"difficulty":"简单","durationHours":0.5},"order":4},{"id":"d7s5","name":"Gibbon Falls / Madison Valley","nameEn":"Gibbon Falls","description":"84英尺高的瀑布，从路边停车场可以直接观赏。Madison Valley是野牛常出没的区域。","latitude":44.6667,"longitude":-110.7333,"type":"waterfall","estimatedMinutes":20,"tips":"路边停车观赏。Madison River沿岸傍晚常有大群野牛。","trailInfo":null,"order":5}],"highlights":["Grizzly Center 近距离看熊","Firehole Lake Drive 间歇泉环路"]},{"id":"day8","dayNumber":8,"date":"2026-07-10","parkName":"黄石国家公园","title":"猛犸热泉步道 → 西拇指 → 黄石湖","subtitle":"Upper Terrace Loop、Main Terrace、West Thumb、Fishing Bridge、Hayden Valley","startLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"endLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"drivingDistanceMiles":100,"drivingTimeHours":3,"accommodation":{"name":"Holiday Inn West Yellowstone","address":"315 Yellowstone Ave, West Yellowstone, MT 59758","latitude":44.6617,"longitude":-111.0978,"phone":"+1-406-646-7365","checkIn":null,"notes":null},"stops":[{"id":"d8s1","name":"猛犸热泉 Upper Terrace Loop","nameEn":"Mammoth Upper Terrace Drive","description":"开车环游上层台地，可以近距离观赏石灰华台地的壮观景色。","latitude":44.972,"longitude":-110.71,"type":"hot_spring","estimatedMinutes":30,"tips":"单行道环路，有多个停车观景点。Orange Spring Mound非常壮观。","trailInfo":null,"order":1},{"id":"d8s2","name":"Main Terrace 梯田步道","nameEn":"Mammoth Main Terrace Boardwalk","description":"猛犸热泉的主要步道区域，可以近距离观赏层层叠叠的白色石灰华梯田。约50分钟步行。","latitude":44.9688,"longitude":-110.7047,"type":"hot_spring","estimatedMinutes":50,"tips":"Palette Spring和Minerva Terrace是最壮观的。台地景观会随季节变化。","trailInfo":{"distanceMiles":1.0,"roundTrip":true,"difficulty":"简单","durationHours":0.8},"order":2},{"id":"d8s3","name":"West Thumb 卡布","nameEn":"West Thumb Geyser Basin","description":"再次经过West Thumb，可以在不同时间段欣赏不同光线下的温泉。","latitude":44.4158,"longitude":-110.5712,"type":"geyser","estimatedMinutes":30,"tips":"下午光线与早晨不同，有时会有不同的色彩效果。","trailInfo":null,"order":3},{"id":"d8s4","name":"Fishing Bridge & 博物馆","nameEn":"Fishing Bridge Museum and Visitor Center","description":"历史性的桥梁和游客中心，可以观赏黄石湖出口处的景色。","latitude":44.565,"longitude":-110.381,"type":"museum","estimatedMinutes":30,"tips":"博物馆有关于黄石鸟类和野生动物的展览。桥上曾经可以钓鱼，现在只能观赏。","trailInfo":null,"order":4},{"id":"d8s5","name":"Hayden Valley 傍晚再寻动物","nameEn":"Hayden Valley (Evening)","description":"傍晚再次经过Hayden Valley，寻找之前可能错过的野生动物。","latitude":44.65,"longitude":-110.45,"type":"wildlife","estimatedMinutes":45,"tips":"傍晚是动物最活跃的时间。注意路上可能有野牛堵路（bison jam）。","trailInfo":null,"order":5}],"highlights":["猛犸热泉 Upper Terrace 梯田","Fishing Bridge 博物馆","Hayden Valley 傍晚看动物"]},{"id":"day9","dayNumber":9,"date":"2026-07-11","parkName":"黄石国家公园","title":"西黄石 → 罗根 (Logan) → 盐湖城 (SLC)","subtitle":"离开黄石，前往盐湖城","startLocation":{"name":"Holiday Inn West Yellowstone","latitude":44.6617,"longitude":-111.0978},"endLocation":{"name":"Homewood Suites by Hilton SLC","latitude":40.7608,"longitude":-111.891},"drivingDistanceMiles":210,"drivingTimeHours":3.5,"accommodation":{"name":"Homewood Suites by Hilton SLC","address":"盐湖城","latitude":40.7608,"longitude":-111.891,"phone":null,"checkIn":"15:00","notes":"盐湖城市区酒店"},"stops":[{"id":"d9s1","name":"离开黄石","nameEn":"Depart West Yellowstone","description":"上午离开西黄石，驱车南下前往盐湖城。","latitude":44.6617,"longitude":-111.0978,"type":"town","estimatedMinutes":15,"tips":"出发前加满油。检查行李是否齐全。","trailInfo":null,"order":1},{"id":"d9s2","name":"Logan 罗根小镇","nameEn":"Logan, Utah","description":"犹他州立大学所在地，是途中休息和加油的好选择。","latitude":41.737,"longitude":-111.8338,"type":"town","estimatedMinutes":60,"tips":"推荐在这里午餐和加油。可以逛逛犹他州立大学校园。","trailInfo":null,"order":2},{"id":"d9s3","name":"Temple Square 或 City Creek Center","nameEn":"Temple Square / City Creek Center","description":"盐湖城市中心的摩门教总部圣殿广场，或旁边的City Creek Center购物中心。","latitude":40.7706,"longitude":-111.8919,"type":"town","estimatedMinutes":90,"tips":"圣殿广场免费参观。City Creek Center是大型购物中心，可以购物和用餐。","trailInfo":null,"order":3}],"highlights":["Logan 小镇午餐","Temple Square 盐湖城地标"]},{"id":"day10","dayNumber":10,"date":"2026-07-12","parkName":"盐湖城","title":"盐湖城 → SLC → 返程","subtitle":"上午自由活动，下午前往机场","startLocation":{"name":"Homewood Suites by Hilton SLC","latitude":40.7608,"longitude":-111.891},"endLocation":{"name":"盐湖城国际机场","latitude":40.7899,"longitude":-111.9791},"drivingDistanceMiles":10,"drivingTimeHours":0.3,"accommodation":null,"stops":[{"id":"d10s1","name":"自然历史博物馆","nameEn":"Natural History Museum of Utah","description":"犹他大学旁的自然历史博物馆，有丰富的恐龙化石和地质展览。","latitude":40.7651,"longitude":-111.8228,"type":"museum","estimatedMinutes":90,"tips":"门票约$20。建筑本身就很壮观，可以俯瞰盐湖城。","trailInfo":null,"order":1},{"id":"d10s2","name":"犹他州议会大厦","nameEn":"Utah State Capitol","description":"壮观的政府建筑，可以免费参观内部和花园。位于山丘上，可以俯瞰盐湖城全景。","latitude":40.7776,"longitude":-111.8882,"type":"museum","estimatedMinutes":45,"tips":"免费参观。内部有精美的壁画和雕塑。","trailInfo":null,"order":2},{"id":"d10s3","name":"还车 & 前往机场","nameEn":"Return Car & Airport","description":"根据航班时间前往机场还车。建议提前2小时到达。","latitude":40.7899,"longitude":-111.9791,"type":"town","estimatedMinutes":60,"tips":"还车前加满油。机场还车点在航站楼对面。","trailInfo":null,"order":3}],"highlights":["自然历史博物馆","犹他州议会大厦","结束愉快的黄石 & 大提顿之旅"]}];
+const POIS=[{"id":"gas_jackson1","name":"Maverick 加油站 (Jackson)","nameEn":"Maverick Gas Station","category":"gas","latitude":43.4778,"longitude":-110.763,"address":"520 W Broadway, Jackson, WY","phone":null,"hours":"24小时","notes":"Jackson镇最方便的加油站","hasSignal":true},{"id":"gas_jackson2","name":"Sinclair 加油站 (Jackson)","nameEn":"Sinclair Gas Station","category":"gas","latitude":43.481,"longitude":-110.765,"address":"345 N Cache Dr, Jackson, WY","phone":null,"hours":"6:00-22:00","notes":null,"hasSignal":true},{"id":"gas_moose","name":"Dornan's 加油站 (Moose)","nameEn":"Dornan's Gas Station","category":"gas","latitude":43.6559,"longitude":-110.7112,"address":"12170 Dornan's Rd, Moose, WY","phone":null,"hours":"7:00-19:00","notes":"大提顿园内唯一加油站，价格较高","hasSignal":false},{"id":"gas_colterbay","name":"Colter Bay 加油站","nameEn":"Colter Bay Gas Station","category":"gas","latitude":43.9044,"longitude":-110.6406,"address":"Colter Bay Village, Grand Teton NP","phone":null,"hours":"7:00-19:00","notes":"大提顿北部加油站","hasSignal":false},{"id":"gas_canyon","name":"Canyon Village 加油站","nameEn":"Canyon Village Gas Station","category":"gas","latitude":44.734,"longitude":-110.488,"address":"Canyon Village, Yellowstone NP","phone":null,"hours":"7:00-20:00","notes":"黄石园内加油站","hasSignal":false},{"id":"gas_oldfaithful","name":"Old Faithful 加油站","nameEn":"Old Faithful Gas Station","category":"gas","latitude":44.46,"longitude":-110.832,"address":"Old Faithful, Yellowstone NP","phone":null,"hours":"7:00-20:00","notes":"黄石园内加油站","hasSignal":false},{"id":"gas_mammoth","name":"Mammoth 加油站","nameEn":"Mammoth Hot Springs Gas Station","category":"gas","latitude":44.97,"longitude":-110.7,"address":"Mammoth Hot Springs, Yellowstone NP","phone":null,"hours":"7:00-19:00","notes":"黄石北部加油站","hasSignal":false},{"id":"gas_tower","name":"Tower Junction 加油站","nameEn":"Tower Junction Gas Station","category":"gas","latitude":44.9136,"longitude":-110.4067,"address":"Tower Junction, Yellowstone NP","phone":null,"hours":"7:00-19:00","notes":"黄石东北部加油站","hasSignal":false},{"id":"gas_westys1","name":"Exxon (West Yellowstone)","nameEn":"Exxon Gas Station","category":"gas","latitude":44.66,"longitude":-111.1,"address":"309 Yellowstone Ave, West Yellowstone, MT","phone":null,"hours":"6:00-22:00","notes":"西黄石镇加油站","hasSignal":true},{"id":"gas_westys2","name":"Town Pump (West Yellowstone)","nameEn":"Town Pump Gas Station","category":"gas","latitude":44.662,"longitude":-111.096,"address":"610 Madison Ave, West Yellowstone, MT","phone":null,"hours":"24小时","notes":"24小时加油，有便利店","hasSignal":true},{"id":"gas_grant","name":"Grant Village 加油站","nameEn":"Grant Village Gas Station","category":"gas","latitude":44.392,"longitude":-110.556,"address":"Grant Village, Yellowstone NP","phone":null,"hours":"7:00-20:00","notes":"黄石南部加油站","hasSignal":false},{"id":"gas_logan","name":"Chevron (Logan)","nameEn":"Chevron Gas Station","category":"gas","latitude":41.74,"longitude":-111.835,"address":"1405 N Main St, Logan, UT","phone":null,"hours":"24小时","notes":"Logan镇加油站","hasSignal":true},{"id":"food_jackson1","name":"Persephone Bakery (早餐)","nameEn":"Persephone Bakery","category":"food","latitude":43.4798,"longitude":-110.7614,"address":"145 E Broadway, Jackson, WY","phone":"+1-307-200-6708","hours":"7:00-15:00","notes":"推荐早餐和糕点","hasSignal":true},{"id":"food_jackson2","name":"Snake River Brewing","nameEn":"Snake River Brewing","category":"food","latitude":43.477,"longitude":-110.7582,"address":"265 S Millward St, Jackson, WY","phone":"+1-307-739-2337","hours":"11:00-22:00","notes":"当地知名酿酒餐厅","hasSignal":true},{"id":"food_jackson3","name":"Bin22 (意大利菜)","nameEn":"Bin22","category":"food","latitude":43.48,"longitude":-110.7618,"address":"200 W Broadway, Jackson, WY","phone":"+1-307-739-9463","hours":"17:00-21:00","notes":"精致意大利餐厅","hasSignal":true},{"id":"food_colterbay","name":"Colter Bay 餐厅","nameEn":"John Colter Café Court","category":"food","latitude":43.905,"longitude":-110.641,"address":"Colter Bay Village, Grand Teton NP","phone":null,"hours":"7:00-20:00","notes":"简餐和快餐","hasSignal":false},{"id":"food_canyon","name":"Canyon Lodge 餐厅","nameEn":"Canyon Lodge Dining Room","category":"food","latitude":44.734,"longitude":-110.486,"address":"Canyon Village, Yellowstone NP","phone":null,"hours":"6:30-21:00","notes":"Canyon区唯一正餐餐厅","hasSignal":false},{"id":"food_oldfaithful","name":"Old Faithful Inn 餐厅","nameEn":"Old Faithful Inn Dining Room","category":"food","latitude":44.46,"longitude":-110.831,"address":"Old Faithful, Yellowstone NP","phone":null,"hours":"6:30-21:00","notes":"需要预约。历史建筑内用餐。","hasSignal":false},{"id":"food_westys1","name":"Madison Crossing Lounge","nameEn":"Madison Crossing Lounge","category":"food","latitude":44.661,"longitude":-111.095,"address":"121 Madison Ave, West Yellowstone, MT","phone":"+1-406-646-7621","hours":"11:00-22:00","notes":"西黄石镇最受欢迎餐厅之一","hasSignal":true},{"id":"food_westys2","name":"Running Bear Pancake House","nameEn":"Running Bear Pancake House","category":"food","latitude":44.6605,"longitude":-111.097,"address":"538 Madison Ave, West Yellowstone, MT","phone":"+1-406-646-7703","hours":"7:00-14:00","notes":"当地最佳早餐","hasSignal":true},{"id":"store_jackson","name":"Albertsons 超市 (Jackson)","nameEn":"Albertsons","category":"store","latitude":43.477,"longitude":-110.768,"address":"105 Buffalo Way, Jackson, WY","phone":null,"hours":"6:00-23:00","notes":"出发前采购零食和水","hasSignal":true},{"id":"store_westys","name":"Food Roundup 超市 (West Yellowstone)","nameEn":"Food Roundup Supermarket","category":"store","latitude":44.662,"longitude":-111.099,"address":"107 Dunraven St, West Yellowstone, MT","phone":null,"hours":"7:00-21:00","notes":"西黄石最大超市","hasSignal":true},{"id":"store_canyon","name":"Canyon General Store","nameEn":"Canyon General Store","category":"store","latitude":44.7345,"longitude":-110.4875,"address":"Canyon Village, Yellowstone NP","phone":null,"hours":"7:30-20:00","notes":"零食、纪念品、基本生活用品","hasSignal":false},{"id":"ranger_moose","name":"Craig Thomas Discovery Center","nameEn":"Craig Thomas Discovery & Visitor Center","category":"ranger","latitude":43.6558,"longitude":-110.7125,"address":"Moose, Grand Teton NP","phone":"+1-307-739-3399","hours":"8:00-17:00","notes":"大提顿主游客中心。有地图和熊喷雾出租。","hasSignal":false},{"id":"ranger_colterbay","name":"Colter Bay 游客中心","nameEn":"Colter Bay Visitor Center","category":"ranger","latitude":43.904,"longitude":-110.64,"address":"Colter Bay, Grand Teton NP","phone":null,"hours":"8:00-17:00","notes":"有印第安文化展览","hasSignal":false},{"id":"ranger_canyon","name":"Canyon 游客教育中心","nameEn":"Canyon Visitor Education Center","category":"ranger","latitude":44.7335,"longitude":-110.4865,"address":"Canyon Village, Yellowstone NP","phone":null,"hours":"8:00-18:00","notes":"有黄石超级火山的互动展览，非常推荐","hasSignal":false},{"id":"ranger_oldfaithful","name":"Old Faithful 游客中心","nameEn":"Old Faithful Visitor Education Center","category":"ranger","latitude":44.4605,"longitude":-110.829,"address":"Old Faithful, Yellowstone NP","phone":null,"hours":"8:00-18:00","notes":"有间歇泉喷发预测时间表","hasSignal":false},{"id":"ranger_mammoth","name":"Mammoth 游客中心","nameEn":"Albright Visitor Center","category":"ranger","latitude":44.969,"longitude":-110.705,"address":"Mammoth Hot Springs, Yellowstone NP","phone":null,"hours":"8:00-17:00","notes":"有黄石历史和野生动物展览","hasSignal":false},{"id":"medical_jackson","name":"St. John's Medical Center","nameEn":"St. John's Medical Center","category":"medical","latitude":43.474,"longitude":-110.771,"address":"625 E Broadway, Jackson, WY","phone":"+1-307-733-3636","hours":"24小时急诊","notes":"最近的完整医院","hasSignal":true},{"id":"medical_mammoth","name":"Mammoth Clinic","nameEn":"Yellowstone Mammoth Clinic","category":"medical","latitude":44.9695,"longitude":-110.703,"address":"Mammoth Hot Springs, Yellowstone NP","phone":"+1-307-344-7965","hours":"8:30-17:00 (夏季)","notes":"黄石园内唯一诊所","hasSignal":false},{"id":"medical_westys","name":"West Yellowstone Family Medicine","nameEn":"West Yellowstone Family Medicine","category":"medical","latitude":44.659,"longitude":-111.096,"address":"236 Yellowstone Ave, West Yellowstone, MT","phone":"+1-406-646-0200","hours":"8:00-17:00","notes":"西黄石镇诊所","hasSignal":true},{"id":"entrance_south","name":"黄石南门","nameEn":"South Entrance","category":"entrance","latitude":44.1336,"longitude":-110.6655,"address":"South Entrance Rd, Yellowstone NP","phone":null,"hours":"24小时 (夏季)","notes":"从大提顿进入黄石。门票$35/车，7天有效。","hasSignal":false},{"id":"entrance_west","name":"黄石西门","nameEn":"West Entrance","category":"entrance","latitude":44.657,"longitude":-111.089,"address":"West Entrance Rd, Yellowstone NP","phone":null,"hours":"24小时 (夏季)","notes":"从西黄石镇进入。最繁忙的入口之一。","hasSignal":false},{"id":"entrance_north","name":"黄石北门","nameEn":"North Entrance (Gardiner)","category":"entrance","latitude":45.0283,"longitude":-110.7053,"address":"Gardiner, MT","phone":null,"hours":"24小时","notes":"全年开放的入口","hasSignal":false},{"id":"entrance_northeast","name":"黄石东北门","nameEn":"Northeast Entrance","category":"entrance","latitude":45.0031,"longitude":-109.8864,"address":"Cooke City, MT","phone":null,"hours":"24小时 (夏季)","notes":"最不拥挤的入口，通往Lamar Valley","hasSignal":false},{"id":"entrance_east","name":"黄石东门","nameEn":"East Entrance","category":"entrance","latitude":44.49,"longitude":-110.0,"address":"East Entrance Rd, Yellowstone NP","phone":null,"hours":"24小时 (夏季)","notes":"通往Yellowstone Lake东岸","hasSignal":false},{"id":"signal_jackson","name":"Jackson 镇 (有信号)","nameEn":"Jackson Town - Cell Signal","category":"signal","latitude":43.4799,"longitude":-110.7624,"address":"Jackson, WY","phone":null,"hours":null,"notes":"AT&T/Verizon/T-Mobile 全覆盖","hasSignal":true},{"id":"signal_westys","name":"西黄石镇 (有信号)","nameEn":"West Yellowstone - Cell Signal","category":"signal","latitude":44.6617,"longitude":-111.0978,"address":"West Yellowstone, MT","phone":null,"hours":null,"notes":"镇上有信号。进入公园后基本无信号。","hasSignal":true},{"id":"signal_mammoth","name":"Mammoth Hot Springs (有限信号)","nameEn":"Mammoth - Limited Cell Signal","category":"signal","latitude":44.9688,"longitude":-110.7047,"address":"Mammoth Hot Springs, Yellowstone NP","phone":null,"hours":null,"notes":"Verizon有微弱信号。其他运营商基本无信号。","hasSignal":true},{"id":"signal_canyon","name":"Canyon Village (有限信号)","nameEn":"Canyon Village - Limited Signal","category":"signal","latitude":44.734,"longitude":-110.4869,"address":"Canyon Village, Yellowstone NP","phone":null,"hours":null,"notes":"Lodge内有WiFi。手机信号不稳定。","hasSignal":true},{"id":"restroom_jennylake","name":"Jenny Lake 卫生间","nameEn":"Jenny Lake Restroom","category":"restroom","latitude":43.753,"longitude":-110.726,"address":"Jenny Lake Visitor Center, Grand Teton NP","phone":null,"hours":"8:00-17:00","notes":"有冲水厕所","hasSignal":false},{"id":"restroom_oldfaithful","name":"Old Faithful 卫生间","nameEn":"Old Faithful Restroom","category":"restroom","latitude":44.46,"longitude":-110.8285,"address":"Old Faithful, Yellowstone NP","phone":null,"hours":"全天","notes":"游客中心旁，有冲水厕所","hasSignal":false},{"id":"restroom_canyon","name":"Canyon Village 卫生间","nameEn":"Canyon Village Restroom","category":"restroom","latitude":44.734,"longitude":-110.487,"address":"Canyon Village, Yellowstone NP","phone":null,"hours":"全天","notes":"Canyon Lodge附近","hasSignal":false},{"id":"parking_jennylake","name":"Jenny Lake 停车场","nameEn":"Jenny Lake Parking","category":"parking","latitude":43.7533,"longitude":-110.725,"address":"Jenny Lake, Grand Teton NP","phone":null,"hours":"全天","notes":"旺季容易满。建议8:00前到达。","hasSignal":false},{"id":"parking_oldfaithful","name":"Old Faithful 停车场","nameEn":"Old Faithful Parking","category":"parking","latitude":44.459,"longitude":-110.83,"address":"Old Faithful, Yellowstone NP","phone":null,"hours":"全天","notes":"大型停车场但夏季中午常满。建议早到。","hasSignal":false},{"id":"parking_grandprismatic","name":"Grand Prismatic 停车场","nameEn":"Midway Geyser Basin Parking","category":"parking","latitude":44.5255,"longitude":-110.8375,"address":"Midway Geyser Basin, Yellowstone NP","phone":null,"hours":"全天","notes":"停车位有限。旺季10:00后可能需要等位。","hasSignal":false}];
+
+const STOP_TYPES={scenic:{icon:'🌄',color:'#2c6e49',name:'风景'},hike:{icon:'🥾',color:'#8B4513',name:'徒步'},geyser:{icon:'♨️',color:'#e74c3c',name:'间歇泉'},hot_spring:{icon:'🌊',color:'#e67e22',name:'温泉'},waterfall:{icon:'💧',color:'#3498db',name:'瀑布'},wildlife:{icon:'🦬',color:'#795548',name:'野生动物'},lake:{icon:'🏞️',color:'#0277bd',name:'湖泊'},town:{icon:'🏘️',color:'#546e7a',name:'城镇'},museum:{icon:'🏛️',color:'#7b1fa2',name:'博物馆'},viewpoint:{icon:'👁️',color:'#00897b',name:'观景点'},canyon:{icon:'🏜️',color:'#bf360c',name:'峡谷'},drive:{icon:'🚗',color:'#455a64',name:'自驾'}};
+const POI_CATS={gas:{icon:'⛽',color:'#e74c3c',name:'加油站'},food:{icon:'🍽️',color:'#e67e22',name:'餐饮'},restroom:{icon:'🚻',color:'#3498db',name:'卫生间'},store:{icon:'🏪',color:'#9b59b6',name:'商店'},medical:{icon:'🏥',color:'#e74c3c',name:'医疗'},ranger:{icon:'🏕️',color:'#27ae60',name:'游客中心'},camping:{icon:'⛺',color:'#795548',name:'露营'},lodging:{icon:'🏨',color:'#1565c0',name:'住宿'},signal:{icon:'📶',color:'#00897b',name:'有信号'},parking:{icon:'🅿️',color:'#546e7a',name:'停车场'},entrance:{icon:'🚪',color:'#2c6e49',name:'入口'}};
+
+let userLat=null,userLng=null,poiFilter=null,mapFilterDay=null,leafletMap=null,mapMarkers=[],mapPolyline=null,mapInited=false,useSatellite=false,stopMiniMap=null;
+
+// ===== LOCATION =====
+function initLocation(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.watchPosition(pos=>{
+    userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+    updateSuggestion();
+  },()=>{},{enableHighAccuracy:true,maximumAge:10000});
+}
+function distanceTo(lat,lng){
+  if(userLat===null)return null;
+  const R=3958.8,dLat=(lat-userLat)*Math.PI/180,dLng=(lng-userLng)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(userLat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fmtDist(miles){
+  if(miles===null)return '—';
+  if(miles<0.1)return Math.round(miles*1609)+'m';
+  return miles.toFixed(1)+' mi';
+}
+
+// ===== SMART SUGGESTION =====
+function updateSuggestion(){
+  if(userLat===null)return;
+  const allStops=ITINERARY.flatMap(d=>d.stops);
+  let nearest=null,nearestDist=Infinity;
+  allStops.forEach(s=>{const d=distanceTo(s.latitude,s.longitude);if(d<nearestDist){nearestDist=d;nearest=s;}});
+  if(!nearest)return;
+  const el=document.getElementById('suggest-card');
+  if(nearestDist<0.31){
+    const day=ITINERARY.find(d=>d.stops.some(s=>s.id===nearest.id));
+    const stops=day?day.stops:[];
+    const idx=stops.findIndex(s=>s.id===nearest.id);
+    const next=idx<stops.length-1?stops[idx+1]:null;
+    let msg=`📍 您已到达「${nearest.name}」`;
+    if(next)msg+=`\n下一站：${next.name}（${fmtDist(distanceTo(next.latitude,next.longitude))}）`;
+    else msg+=`\n今天行程的最后一站！`;
+    el.innerHTML=`<div class="suggest-icon">🎯</div><div class="suggest-msg">${msg}</div>`;
+    el.className='suggest-card show';
+  } else if(nearestDist<50){
+    el.innerHTML=`<div class="suggest-icon">🚗</div><div class="suggest-msg">最近景点：${nearest.name}\n距离：${fmtDist(nearestDist)}</div>`;
+    el.className='suggest-card show';
+  } else {
+    el.className='suggest-card';
+  }
+}
+
+// ===== TABS =====
+function switchTab(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const tabs=['map','itinerary','poi','settings'];
+  document.querySelectorAll('.tab-item')[tabs.indexOf(name)].classList.add('active');
+  if(name==='map')initMap();
+  if(name==='itinerary'){renderDayList();renderCountdown();}
+  if(name==='poi')renderPOIs();
+  if(name==='settings')renderTripInfo();
+  if(name!=='map')document.querySelector('.tab-content').scrollTop=0;
+}
+
+// ===== MAP =====
+function initMap(){
+  if(typeof L==='undefined'){document.getElementById('leaflet-map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text2);font-size:17px;text-align:center;padding:40px">🗺️ 地图加载中…<br>需要网络连接</div>';return;}
+  if(mapInited){leafletMap.invalidateSize();return;}
+  mapInited=true;
+  leafletMap=L.map('leaflet-map',{zoomControl:false,attributionControl:false}).setView([44.4280,-110.5885],8);
+  setMapTiles();
+  renderMapMarkers();
+}
+function setMapTiles(){
+  if(!leafletMap)return;
+  leafletMap.eachLayer(l=>{if(l instanceof L.TileLayer)leafletMap.removeLayer(l);});
+  if(useSatellite){
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18}).addTo(leafletMap);
+  }else{
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(leafletMap);
+  }
+}
+function toggleMapStyle(){useSatellite=!useSatellite;setMapTiles();document.getElementById('map-style-btn').textContent=useSatellite?'🗺️':'🛰️';}
+function locateMe(){
+  if(userLat!==null)leafletMap.setView([userLat,userLng],14);
+  else{navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;leafletMap.setView([userLat,userLng],14);});}
+}
+function renderMapMarkers(){
+  mapMarkers.forEach(m=>leafletMap.removeLayer(m));mapMarkers=[];
+  if(mapPolyline){leafletMap.removeLayer(mapPolyline);mapPolyline=null;}
+  const days=mapFilterDay?ITINERARY.filter(d=>d.dayNumber===mapFilterDay):ITINERARY;
+  const coords=[];
+  days.forEach(day=>{
+    day.stops.forEach(stop=>{
+      const t=STOP_TYPES[stop.type]||{icon:'📍',color:'#888'};
+      const marker=L.circleMarker([stop.latitude,stop.longitude],{radius:10,fillColor:t.color,color:'#fff',weight:2,fillOpacity:.9}).addTo(leafletMap);
+      marker.bindPopup(`<b>${t.icon} ${stop.name}</b><br><span style="color:#666">${stop.nameEn}</span><br><br>${stop.description.substring(0,60)}...<br><br><a href="javascript:void(0)" onclick="openNav(${stop.latitude},${stop.longitude},'${encodeURIComponent(stop.name)}')" style="color:#2980ef;font-weight:600">🧭 导航</a>`,{maxWidth:250});
+      mapMarkers.push(marker);
+      coords.push([stop.latitude,stop.longitude]);
+    });
+  });
+  if(coords.length>0){
+    if(mapFilterDay)mapPolyline=L.polyline(coords,{color:'#2980ef',weight:3,opacity:.7,dashArray:'8,8'}).addTo(leafletMap);
+    leafletMap.fitBounds(L.latLngBounds(coords).pad(.1));
+  }
+}
+function toggleDayFilter(){document.getElementById('day-filter-sheet').classList.add('show');renderDayFilterList();}
+function closeDayFilter(e){if(!e||e.target.classList.contains('day-filter-sheet'))document.getElementById('day-filter-sheet').classList.remove('show');}
+function renderDayFilterList(){
+  let html=`<div class="day-filter-item" onclick="setMapFilter(null)"><span style="font-size:20px">🌐</span><div><div style="font-size:17px;font-weight:600">显示全部</div></div>${mapFilterDay===null?'<span style="margin-left:auto;color:var(--green);font-size:20px">✓</span>':''}</div>`;
+  ITINERARY.forEach(d=>{
+    html+=`<div class="day-filter-item" onclick="setMapFilter(${d.dayNumber})"><span class="day-badge ${getDayStatus(d.date)}" style="width:36px;height:36px;font-size:13px">D${d.dayNumber}</span><div><div style="font-size:16px;font-weight:600">${d.title}</div><div style="font-size:13px;color:var(--text2)">${d.subtitle}</div></div>${mapFilterDay===d.dayNumber?'<span style="margin-left:auto;color:var(--green);font-size:20px">✓</span>':''}</div>`;
+  });
+  document.getElementById('day-filter-list').innerHTML=html;
+}
+function setMapFilter(day){
+  mapFilterDay=day;
+  document.getElementById('filter-label').textContent=day?`D${day}`:'全部';
+  document.getElementById('day-filter-sheet').classList.remove('show');
+  renderMapMarkers();
+}
+
+// ===== HELPERS =====
+function getDayStatus(ds){const t=new Date();t.setHours(0,0,0,0);const d=new Date(ds);d.setHours(0,0,0,0);if(d.getTime()===t.getTime())return'today';return d<t?'past':'future';}
+function formatDate(ds){const d=new Date(ds),w=['周日','周一','周二','周三','周四','周五','周六'];return`${d.getMonth()+1}月${d.getDate()}日 ${w[d.getDay()]}`;}
+function getParkClass(n){if(n.includes('提顿'))return'park-teton';if(n.includes('黄石'))return'park-yellowstone';return'park-other';}
+function fmtDriveTime(h){const hr=Math.floor(h),mn=Math.round((h-hr)*60);return hr>0&&mn>0?`${hr}小时${mn}分`:hr>0?`${hr}小时`:`${mn}分`;}
+function openNav(lat,lng,name){const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);if(isIOS)window.open(`maps://maps.apple.com/?daddr=${lat},${lng}&q=${name}`,'_blank');else window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,'_blank');}
+
+// ===== COUNTDOWN =====
+function renderCountdown(){
+  const now=new Date();now.setHours(0,0,0,0);const start=new Date('2026-07-03');start.setHours(0,0,0,0);const end=new Date('2026-07-12');end.setHours(0,0,0,0);
+  const diff=Math.ceil((start-now)/864e5);
+  let html;
+  if(diff>0)html=`<div class="countdown-card"><div class="countdown-label">距离出发还有</div><div class="countdown-number">${diff}</div><div class="countdown-unit">天</div><div class="countdown-dates">🗓️ 2026年7月3日 - 7月12日 · 10天</div></div>`;
+  else if(now<=end){const td=Math.ceil((now-start)/864e5)+1;html=`<div class="countdown-card" style="background:linear-gradient(135deg,#e8860c,#f39c12)"><div class="countdown-label">旅行进行中！</div><div class="countdown-number">D${td}</div><div class="countdown-unit">第 ${td} 天</div></div>`;}
+  else html=`<div class="countdown-card" style="background:linear-gradient(135deg,#546e7a,#78909c)"><div class="countdown-label">旅行已结束</div><div class="countdown-number">🏔️</div><div class="countdown-unit">美好的回忆</div></div>`;
+  document.getElementById('countdown').innerHTML=html;
+}
+
+// ===== DAY LIST =====
+function renderDayList(){
+  let html='',todayIdx=-1;
+  ITINERARY.forEach((day,i)=>{
+    const status=getDayStatus(day.date);
+    if(status==='today')todayIdx=i;
+    const cardClass=status==='today'?'today-card':status==='past'?'past-card':'';
+    html+=`<div class="card day-card ${cardClass}" id="day-card-${day.dayNumber}" onclick="showDay(${day.dayNumber})">`;
+    html+=`<span class="park-label ${getParkClass(day.parkName)}">${day.parkName}</span>`;
+    html+=`<div class="day-header"><div class="day-badge ${status}">D${day.dayNumber}</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><div class="day-title">${day.title}</div>${status==='today'?'<span class="today-label">今天</span>':''}</div><div class="day-date">${formatDate(day.date)}</div></div><div style="text-align:right;font-size:13px;color:var(--text2)"><div>🚗 ~${day.drivingDistanceMiles} mi</div><div>⏱️ ${fmtDriveTime(day.drivingTimeHours)}</div></div></div>`;
+    html+=`<div class="day-subtitle">${day.subtitle}</div>`;
+    // Stop preview
+    html+=`<div class="stop-preview">`;
+    const maxShow=5;
+    day.stops.slice(0,maxShow).forEach(s=>{
+      const t=STOP_TYPES[s.type]||{icon:'📍',color:'#888'};
+      html+=`<span class="stop-pill" style="background:${t.color}18;color:${t.color}">${t.icon} ${s.name.length>6?s.name.substring(0,6)+'…':s.name}</span>`;
+    });
+    if(day.stops.length>maxShow)html+=`<span class="stop-more">+${day.stops.length-maxShow}</span>`;
+    html+=`</div>`;
+    // Accommodation
+    if(day.accommodation)html+=`<div class="accom-preview">🛏️ ${day.accommodation.name}</div>`;
+    // Highlights
+    if(day.highlights&&day.highlights.length)html+=`<div class="day-highlights">${day.highlights.map(h=>`<span class="hl-tag">${h}</span>`).join('')}</div>`;
+    html+=`</div>`;
+  });
+  document.getElementById('day-list').innerHTML=html;
+  // Auto-scroll to today
+  if(todayIdx>=0)setTimeout(()=>{const el=document.getElementById('day-card-'+(todayIdx+1));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},300);
+}
+
+// ===== DAY DETAIL =====
+function showDay(num){
+  const day=ITINERARY.find(d=>d.dayNumber===num);if(!day)return;
+  const a=day.accommodation;
+  let html=`<span class="park-label ${getParkClass(day.parkName)}">${day.parkName}</span>
+    <div style="font-size:14px;color:var(--text2);margin-top:4px">${formatDate(day.date)}</div>
+    <h2 style="font-size:28px;font-weight:800;margin:6px 0 4px">D${day.dayNumber} · ${day.title}</h2>
+    <p style="font-size:16px;color:var(--text2);margin-bottom:16px">${day.subtitle}</p>`;
+  // Route info
+  html+=`<div class="card" style="display:flex;text-align:center"><div style="flex:1"><div style="font-size:22px;font-weight:700;color:var(--blue)">🚗 ${day.drivingDistanceMiles}</div><div style="font-size:13px;color:var(--text2)">英里</div></div><div style="flex:1"><div style="font-size:22px;font-weight:700;color:var(--blue)">⏱️ ${fmtDriveTime(day.drivingTimeHours)}</div><div style="font-size:13px;color:var(--text2)">车程</div></div><div style="flex:1"><div style="font-size:22px;font-weight:700;color:var(--blue)">📍 ${day.stops.length}</div><div style="font-size:13px;color:var(--text2)">景点</div></div></div>`;
+  // Stops timeline
+  html+=`<div class="section-title">📍 行程景点</div><div class="stop-timeline">`;
+  day.stops.forEach((stop,i)=>{
+    const t=STOP_TYPES[stop.type]||{icon:'📍',color:'#888',name:stop.type};
+    const isLast=i===day.stops.length-1;
+    const dist=distanceTo(stop.latitude,stop.longitude);
+    const tm=stop.estimatedMinutes;const timeStr=tm>=60?`${Math.floor(tm/60)}h${tm%60>0?tm%60+'min':''}`:`${tm}min`;
+    html+=`<div class="timeline-item" onclick="showStopDetail('${stop.id}',${day.dayNumber})"><div class="timeline-left"><div class="timeline-dot" style="background:${t.color}">${stop.order}</div>${isLast?'':'<div class="timeline-line"></div>'}</div><div class="timeline-content"><div class="tl-name">${t.icon} ${stop.name}</div><div class="tl-name-en">${stop.nameEn}</div><div class="tl-desc">${stop.description}</div><div class="tl-meta"><span>⏱️ ~${timeStr}</span>${dist!==null?`<span class="tl-distance">📍 ${fmtDist(dist)}</span>`:''}</div>`;
+    if(stop.trailInfo){const tr=stop.trailInfo;html+=`<div class="tl-trail">🥾 ${tr.distance} · ${tr.roundTrip?'往返':'单程'} · ${tr.difficulty} · ~${tr.duration}</div>`;}
+    html+=`</div></div>`;
+  });
+  html+=`</div>`;
+  // Accommodation
+  if(a){
+    html+=`<div class="section-title" style="margin-top:8px">🏨 住宿</div><div class="accom-card"><div class="accom-name">🛏️ ${a.name}</div><div class="accom-row">📍 ${a.address}</div>`;
+    if(a.phone)html+=`<div class="accom-row"><a href="tel:${a.phone}">📞 ${a.phone}</a></div>`;
+    if(a.checkIn)html+=`<div class="accom-row">🕐 入住 ${a.checkIn}</div>`;
+    if(a.notes)html+=`<div class="accom-row">💡 ${a.notes}</div>`;
+    html+=`<button class="nav-btn" style="background:rgba(255,255,255,.2);margin-top:10px" onclick="openNav(${a.latitude},${a.longitude},'${encodeURIComponent(a.name)}')">🧭 导航到酒店</button></div>`;
+  }
+  // Highlights
+  if(day.highlights&&day.highlights.length){
+    html+=`<div class="section-title">⭐ 今日亮点</div><div class="card">`;
+    day.highlights.forEach(h=>{html+=`<div style="font-size:16px;padding:4px 0">⭐ ${h}</div>`;});
+    html+=`</div>`;
+  }
+  document.getElementById('detail-body').innerHTML=html;
+  document.getElementById('detail-overlay').classList.add('show');
+  document.getElementById('detail-overlay').scrollTop=0;
+}
+function closeDetail(){document.getElementById('detail-overlay').classList.remove('show');}
+
+// ===== STOP DETAIL =====
+function showStopDetail(stopId,dayNum){
+  const day=ITINERARY.find(d=>d.dayNumber===dayNum);if(!day)return;
+  const stop=day.stops.find(s=>s.id===stopId);if(!stop)return;
+  const t=STOP_TYPES[stop.type]||{icon:'📍',color:'#888',name:stop.type};
+  const dist=distanceTo(stop.latitude,stop.longitude);
+  const tm=stop.estimatedMinutes;const timeStr=tm>=60?`${Math.floor(tm/60)}h${tm%60>0?tm%60+'min':''}`:`${tm}min`;
+
+  let html=`<div class="stop-mini-map" id="stop-mini-map"></div>`;
+  html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:28px">${t.icon}</span><span style="font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;background:${t.color}22;color:${t.color}">${t.name}</span></div>`;
+  html+=`<h2 style="font-size:24px;font-weight:800;margin:8px 0 4px">${stop.name}</h2>`;
+  html+=`<div style="font-size:16px;color:var(--text2);margin-bottom:12px">${stop.nameEn}</div>`;
+  html+=`<div style="font-size:16px;line-height:1.6;margin-bottom:12px">${stop.description}</div>`;
+  html+=`<div style="display:flex;gap:16px;margin-bottom:8px"><span style="font-size:15px;color:var(--text2)">⏱️ ~${timeStr}</span>${dist!==null?`<span style="font-size:15px;color:var(--blue);font-weight:600">📍 ${fmtDist(dist)}</span>`:''}</div>`;
+
+  if(stop.trailInfo){
+    const tr=stop.trailInfo;
+    html+=`<div class="section-title" style="margin-top:16px">🥾 徒步信息</div><div class="trail-grid"><div class="trail-item"><div class="trail-value">↔️ ${tr.distance}</div><div class="trail-label">${tr.roundTrip?'往返':'单程'}</div></div><div class="trail-item"><div class="trail-value">🥾 ${tr.difficulty}</div><div class="trail-label">难度</div></div><div class="trail-item"><div class="trail-value">⏱️ ${tr.duration}</div><div class="trail-label">预计时间</div></div></div>`;
+  }
+  if(stop.tips)html+=`<div class="section-title" style="margin-top:16px">💡 小贴士</div><div class="stop-tips">${stop.tips}</div>`;
+  html+=`<button class="nav-btn" onclick="openNav(${stop.latitude},${stop.longitude},'${encodeURIComponent(stop.name)}')">🧭 在地图中导航</button>`;
+
+  document.getElementById('stop-detail-body').innerHTML=html;
+  document.getElementById('stop-detail-overlay').classList.add('show');
+  document.getElementById('stop-detail-overlay').scrollTop=0;
+  // Mini map
+  setTimeout(()=>{
+    if(typeof L==='undefined')return;
+    if(stopMiniMap){stopMiniMap.remove();stopMiniMap=null;}
+    const el=document.getElementById('stop-mini-map');if(!el)return;
+    stopMiniMap=L.map(el,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false}).setView([stop.latitude,stop.longitude],14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(stopMiniMap);
+    L.marker([stop.latitude,stop.longitude]).addTo(stopMiniMap).bindPopup(stop.name).openPopup();
+  },100);
+}
+function closeStopDetail(){document.getElementById('stop-detail-overlay').classList.remove('show');if(stopMiniMap){stopMiniMap.remove();stopMiniMap=null;}}
+
+// ===== POI =====
+function renderPOIs(){
+  const catCounts={};POIS.forEach(p=>{catCounts[p.category]=(catCounts[p.category]||0)+1;});
+  let fHtml=`<button class="poi-chip ${poiFilter===null?'active':''}" style="${poiFilter===null?'background:var(--green);color:white':'background:rgba(44,110,73,.12);color:var(--green)'}" onclick="setPoiFilter(null)">全部 (${POIS.length})</button>`;
+  Object.entries(POI_CATS).forEach(([k,c])=>{
+    if(!catCounts[k])return;
+    const a=poiFilter===k;
+    fHtml+=`<button class="poi-chip ${a?'active':''}" style="${a?'background:'+c.color+';color:white':'background:'+c.color+'22;color:'+c.color}" onclick="setPoiFilter('${k}')">${c.icon} ${c.name} (${catCounts[k]})</button>`;
+  });
+  document.getElementById('poi-filters').innerHTML=fHtml;
+
+  let pois=[...POIS];
+  if(poiFilter)pois=pois.filter(p=>p.category===poiFilter);
+  // Sort by distance if location available
+  if(userLat!==null)pois.sort((a,b)=>distanceTo(a.latitude,a.longitude)-distanceTo(b.latitude,b.longitude));
+
+  if(userLat===null&&!poiFilter){
+    document.getElementById('poi-list').innerHTML=`<div class="no-location"><div class="big-icon">📍</div><div style="font-size:20px;font-weight:600;margin-bottom:8px">开启定位查看附近设施</div><div>开启定位后，设施将按距离排序</div><button class="loc-btn" onclick="requestLocation()">📍 开启定位</button><div style="margin-top:20px;border-top:.5px solid var(--border);padding-top:20px;text-align:left">${renderPOIList(pois)}</div></div>`;
+    return;
+  }
+  document.getElementById('poi-list').innerHTML=renderPOIList(pois);
+}
+function renderPOIList(pois){
+  let html='';
+  pois.forEach(p=>{
+    const c=POI_CATS[p.category]||{icon:'📍',color:'#888',name:p.category};
+    const dist=distanceTo(p.latitude,p.longitude);
+    html+=`<div class="poi-item" onclick="openNav(${p.latitude},${p.longitude},'${encodeURIComponent(p.name)}')"><div class="poi-icon" style="background:${c.color}22;color:${c.color}">${c.icon}</div><div style="flex:1;min-width:0"><div class="poi-name">${p.name}</div><div class="poi-detail">${p.nameEn}${p.address?' · '+p.address:''}</div>${p.notes?`<div class="poi-detail" style="color:var(--orange)">${p.notes}</div>`:''}</div><div class="poi-right">${dist!==null?`<div class="poi-dist">${fmtDist(dist)}</div>`:''}${p.hours?`<div class="poi-hours">🕐 ${p.hours}</div>`:''}${p.hasSignal?'<div class="poi-signal" style="color:var(--green)">📶 有信号</div>':'<div class="poi-signal" style="color:var(--text3)">📵 无信号</div>'}</div></div>`;
+  });
+  return html||'<div style="text-align:center;padding:40px 0;color:var(--text2)">该分类暂无设施</div>';
+}
+function setPoiFilter(c){poiFilter=c;renderPOIs();}
+function requestLocation(){navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;renderPOIs();},()=>alert('无法获取位置信息，请在浏览器设置中允许位置访问'),{enableHighAccuracy:true});}
+
+// ===== TRIP INFO =====
+function renderTripInfo(){
+  const totalMi=ITINERARY.reduce((a,d)=>a+d.drivingDistanceMiles,0);
+  const totalStops=ITINERARY.reduce((a,d)=>a+d.stops.length,0);
+  const hotels=[...new Set(ITINERARY.map(d=>d.accommodation.name))];
+  let html=`<div class="section-title">🗺️ 行程概览</div>
+    <div class="setting-row"><span>旅行日期</span><span class="setting-value">2026年7月3日 - 7月12日</span></div>
+    <div class="setting-row"><span>总天数</span><span class="setting-value">10 天</span></div>
+    <div class="setting-row"><span>总里程</span><span class="setting-value">${totalMi} 英里</span></div>
+    <div class="setting-row"><span>景点数</span><span class="setting-value">${totalStops} 个</span></div>
+    <div class="setting-row"><span>出发</span><span class="setting-value">2026年7月3日</span></div>
+    <div class="setting-row"><span>返回</span><span class="setting-value">2026年7月12日</span></div>`;
+  hotels.forEach(h=>{html+=`<div style="font-size:14px;color:var(--text2);padding:2px 0 2px 16px">🏨 ${h}</div>`;});
+  document.getElementById('trip-info').innerHTML=html;
+}
+
+// ===== MAP LOADING =====
+let leafletReady=false;
+function onLeafletReady(){leafletReady=true;if(document.getElementById('page-map').classList.contains('active'))initMap();}
+
+// ===== INIT =====
+renderCountdown();renderDayList();initLocation();
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async onload="onLeafletReady()"></script>
+</body>
+</html>
