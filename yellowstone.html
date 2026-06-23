@@ -244,6 +244,11 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
       <div class="page-title" style="margin-bottom:0">💬 论坛</div>
       <span id="sync-badge" class="sync-status sync-offline">● 离线</span>
     </div>
+    <div style="padding:0 16px 10px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:14px;color:var(--text2)">我是</span>
+      <button id="my-name-btn" onclick="promptChangeName()" style="font-size:15px;font-weight:600;color:var(--green);background:rgba(44,110,73,.08);border:1.5px dashed rgba(44,110,73,.3);border-radius:10px;padding:5px 12px;cursor:pointer;-webkit-appearance:none"></button>
+      <span style="font-size:12px;color:var(--text3)">点击可改名</span>
+    </div>
     <div class="forum-filter-bar" id="forum-filters"></div>
     <div id="forum-list"></div>
   </div>
@@ -342,8 +347,8 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
 <div class="nickname-modal" id="nickname-modal">
   <div class="nickname-box">
     <div style="font-size:40px;margin-bottom:8px">👋</div>
-    <div style="font-size:22px;font-weight:800;margin-bottom:4px">欢迎来到论坛</div>
-    <div style="font-size:15px;color:var(--text2)">给自己取个昵称吧</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px">修改昵称</div>
+    <div style="font-size:15px;color:var(--text2)">给自己取个好记的名字</div>
     <input class="nickname-input" id="nickname-input" placeholder="你的昵称" maxlength="12">
     <button class="nickname-submit" onclick="saveNickname()">开始聊天 🎉</button>
   </div>
@@ -419,7 +424,7 @@ function switchTab(name){
   document.querySelectorAll('.tab-item')[tabs.indexOf(name)].classList.add('active');
   if(name==='map')initMap();
   if(name==='itinerary'){renderDayList();renderCountdown();}
-  if(name==='forum'){renderForum();document.getElementById('compose-fab').classList.add('show');}
+  if(name==='forum'){renderForum();updateNameDisplay();document.getElementById('compose-fab').classList.add('show');}
   else{document.getElementById('compose-fab').classList.remove('show');}
   if(name==='poi')renderPOIs();
   if(name==='settings')renderTripInfo();
@@ -679,9 +684,15 @@ function saveFirebaseConfig(){
 }
 
 // ===== FORUM =====
-let forumFilter='all',myNickname=localStorage.getItem('ys_nickname')||'';
+let forumFilter='all';
 const FORUM_STORAGE_KEY='ys_forum_comments';
 const FORUM_QUEUE_KEY='ys_forum_queue';
+const DEFAULT_NAMES=['探险家','旅行者','冒险家','观察员','摄影师','徒步者','驴友','背包客'];
+const ANIMALS=['🐻','🦬','🦌','🐺','🦅','🐿️','🦎','🐟'];
+
+function getDeviceId(){let id=localStorage.getItem('ys_device_id');if(!id){id='dev_'+Date.now().toString(36)+'_'+Math.random().toString(36).substr(2,4);localStorage.setItem('ys_device_id',id);}return id;}
+function getMyNickname(){let n=localStorage.getItem('ys_nickname');if(!n){const animal=ANIMALS[Math.floor(Math.random()*ANIMALS.length)];const name=DEFAULT_NAMES[Math.floor(Math.random()*DEFAULT_NAMES.length)];n=animal+' '+name;localStorage.setItem('ys_nickname',n);}return n;}
+let myNickname=getMyNickname();
 
 function getComments(){try{return JSON.parse(localStorage.getItem(FORUM_STORAGE_KEY)||'[]');}catch(e){return[];}}
 function saveComments(c){localStorage.setItem(FORUM_STORAGE_KEY,JSON.stringify(c));}
@@ -763,7 +774,6 @@ function escHtml(s){const d=document.createElement('div');d.textContent=s;return
 function setForumFilter(f){forumFilter=f;renderForum();}
 
 function openCompose(keepText){
-  if(!myNickname){document.getElementById('nickname-modal').classList.add('show');return;}
   renderComposeTags();
   if(!keepText){document.getElementById('compose-text').value='';document.getElementById('compose-send-btn').disabled=true;}
   document.getElementById('compose-overlay').classList.add('show');
@@ -786,7 +796,16 @@ function saveNickname(){
   myNickname=name;
   localStorage.setItem('ys_nickname',name);
   document.getElementById('nickname-modal').classList.remove('show');
-  openCompose();
+  updateNameDisplay();
+}
+function promptChangeName(){
+  document.getElementById('nickname-input').value=myNickname;
+  document.getElementById('nickname-modal').classList.add('show');
+  setTimeout(()=>{document.getElementById('nickname-input').focus();document.getElementById('nickname-input').select();},100);
+}
+function updateNameDisplay(){
+  const el=document.getElementById('my-name-btn');
+  if(el)el.textContent=myNickname;
 }
 
 function sendComment(){
