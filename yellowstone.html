@@ -382,15 +382,16 @@ function setMapFilter(day){
 }
 
 // ===== HELPERS =====
-function getDayStatus(ds){const t=new Date();t.setHours(0,0,0,0);const d=new Date(ds);d.setHours(0,0,0,0);if(d.getTime()===t.getTime())return'today';return d<t?'past':'future';}
-function formatDate(ds){const d=new Date(ds),w=['周日','周一','周二','周三','周四','周五','周六'];return`${d.getMonth()+1}月${d.getDate()}日 ${w[d.getDay()]}`;}
+function parseDate(ds){const p=ds.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function getDayStatus(ds){const t=new Date();t.setHours(0,0,0,0);const d=parseDate(ds);if(d.getTime()===t.getTime())return'today';return d<t?'past':'future';}
+function formatDate(ds){const d=parseDate(ds),w=['周日','周一','周二','周三','周四','周五','周六'];return`${d.getMonth()+1}月${d.getDate()}日 ${w[d.getDay()]}`;}
 function getParkClass(n){if(n.includes('提顿'))return'park-teton';if(n.includes('黄石'))return'park-yellowstone';return'park-other';}
 function fmtDriveTime(h){const hr=Math.floor(h),mn=Math.round((h-hr)*60);return hr>0&&mn>0?`${hr}小时${mn}分`:hr>0?`${hr}小时`:`${mn}分`;}
 function openNav(lat,lng,name){const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);if(isIOS)window.open(`maps://maps.apple.com/?daddr=${lat},${lng}&q=${name}`,'_blank');else window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,'_blank');}
 
 // ===== COUNTDOWN =====
 function renderCountdown(){
-  const now=new Date();now.setHours(0,0,0,0);const start=new Date('2026-07-03');start.setHours(0,0,0,0);const end=new Date('2026-07-12');end.setHours(0,0,0,0);
+  const now=new Date();now.setHours(0,0,0,0);const start=new Date(2026,6,3);const end=new Date(2026,6,12);
   const diff=Math.ceil((start-now)/864e5);
   let html;
   if(diff>0)html=`<div class="countdown-card"><div class="countdown-label">距离出发还有</div><div class="countdown-number">${diff}</div><div class="countdown-unit">天</div><div class="countdown-dates">🗓️ 2026年7月3日 - 7月12日 · 10天</div></div>`;
