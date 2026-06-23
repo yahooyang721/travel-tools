@@ -148,6 +148,56 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
 .setting-row:last-child{border-bottom:none}
 .setting-value{color:var(--text2);font-size:15px}
 .maps-tip{font-size:14px;color:var(--blue);background:rgba(41,128,239,.06);padding:12px;border-radius:12px;line-height:1.5;margin-top:12px}
+
+/* Forum Tab */
+.forum-header{display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px}
+.forum-filter-bar{overflow-x:auto;white-space:nowrap;padding:0 16px 12px;-webkit-overflow-scrolling:touch}
+.forum-filter-bar::-webkit-scrollbar{display:none}
+.forum-chip{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;border:none;margin-right:8px;-webkit-appearance:none;background:rgba(44,110,73,.1);color:var(--green)}
+.forum-chip.active{background:var(--green);color:#fff}
+.forum-compose-btn{position:fixed;bottom:calc(var(--tab-h)+var(--safe-bottom)+16px);right:16px;width:56px;height:56px;border-radius:50%;background:var(--green);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 12px rgba(44,110,73,.4);z-index:90;display:none;-webkit-appearance:none}
+.forum-compose-btn.show{display:flex;align-items:center;justify-content:center}
+.forum-compose-btn:active{transform:scale(.92)}
+.comment-card{background:var(--card);border-radius:14px;padding:14px;margin:0 16px 10px;box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.comment-author{font-size:15px;font-weight:700;color:var(--green)}
+.comment-tag{font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(41,128,239,.1);color:var(--blue);margin-left:8px;font-weight:500}
+.comment-time{font-size:12px;color:var(--text3);margin-left:auto}
+.comment-text{font-size:16px;line-height:1.6;margin-top:8px;word-break:break-word}
+.comment-location{font-size:13px;color:var(--text2);margin-top:6px}
+.comment-reactions{display:flex;gap:8px;margin-top:8px}
+.react-btn{font-size:14px;padding:4px 10px;border-radius:16px;border:1px solid var(--border);background:var(--card);cursor:pointer;-webkit-appearance:none}
+.react-btn.reacted{border-color:var(--green);background:rgba(44,110,73,.08)}
+.comment-empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.comment-empty .big-icon{font-size:56px;margin-bottom:12px}
+.sync-status{font-size:12px;padding:4px 12px;border-radius:12px;display:inline-flex;align-items:center;gap:4px}
+.sync-online{background:rgba(39,174,96,.1);color:#27ae60}
+.sync-offline{background:rgba(231,76,60,.1);color:#e74c3c}
+.sync-syncing{background:rgba(41,128,239,.1);color:#2980ef}
+
+/* Compose Overlay */
+.compose-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:170;display:none;flex-direction:column;padding-top:calc(var(--safe-top)+16px)}
+.compose-overlay.show{display:flex}
+.compose-header{display:flex;align-items:center;justify-content:space-between;padding:0 16px 16px}
+.compose-cancel{font-size:17px;color:var(--text2);background:none;border:none;cursor:pointer;-webkit-appearance:none;padding:8px 0}
+.compose-send{font-size:17px;font-weight:600;color:#fff;background:var(--green);border:none;border-radius:10px;padding:8px 20px;cursor:pointer;-webkit-appearance:none}
+.compose-send:disabled{opacity:.4}
+.compose-send:active{opacity:.8}
+.compose-body{flex:1;padding:0 16px;overflow-y:auto}
+.compose-textarea{width:100%;min-height:120px;font-size:17px;line-height:1.6;border:1px solid var(--border);border-radius:14px;padding:14px;resize:none;font-family:inherit;-webkit-appearance:none;background:var(--card)}
+.compose-textarea:focus{outline:none;border-color:var(--green)}
+.compose-tag-section{margin-top:16px}
+.compose-tag-label{font-size:15px;font-weight:600;margin-bottom:8px}
+.compose-tag-grid{display:flex;flex-wrap:wrap;gap:8px}
+.compose-tag{padding:8px 14px;border-radius:12px;font-size:14px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;-webkit-appearance:none}
+.compose-tag.selected{border-color:var(--green);background:rgba(44,110,73,.08);color:var(--green);font-weight:600}
+
+/* Nickname Modal */
+.nickname-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.nickname-modal.show{display:flex}
+.nickname-box{background:var(--card);border-radius:20px;padding:28px;width:100%;max-width:340px;text-align:center}
+.nickname-input{width:100%;font-size:20px;text-align:center;border:2px solid var(--border);border-radius:14px;padding:14px;margin:16px 0;font-family:inherit;-webkit-appearance:none}
+.nickname-input:focus{outline:none;border-color:var(--green)}
+.nickname-submit{width:100%;font-size:18px;font-weight:600;color:#fff;background:var(--green);border:none;border-radius:14px;padding:14px;cursor:pointer;-webkit-appearance:none}
 </style>
 </head>
 <body>
@@ -188,6 +238,17 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
     </div>
   </div>
 
+  <!-- FORUM -->
+  <div id="page-forum" class="page">
+    <div class="forum-header">
+      <div class="page-title" style="margin-bottom:0">💬 论坛</div>
+      <span id="sync-badge" class="sync-status sync-offline">● 离线</span>
+    </div>
+    <div class="forum-filter-bar" id="forum-filters"></div>
+    <div id="forum-list"></div>
+  </div>
+  <button class="forum-compose-btn" id="compose-fab" onclick="openCompose()">✏️</button>
+
   <!-- SETTINGS -->
   <div id="page-settings" class="page">
     <div class="page-title">⚙️ 设置</div>
@@ -224,6 +285,18 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
         <div class="safety-item">随身带足饮用水，园内补给点有限</div>
         <div class="safety-item">注意天气变化，山区随时可能下雨降温</div>
       </div>
+      <div class="card">
+        <div class="section-title">💬 论坛设置</div>
+        <div class="setting-row"><span>昵称</span><span class="setting-value" id="setting-nickname">未设置</span></div>
+        <button style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--green);background:rgba(44,110,73,.06);color:var(--green);font-size:16px;font-weight:600;cursor:pointer;margin-top:8px;-webkit-appearance:none" onclick="document.getElementById('nickname-modal').classList.add('show')">修改昵称</button>
+        <div style="margin-top:16px;padding-top:16px;border-top:.5px solid var(--border)">
+          <div style="font-size:15px;font-weight:600;margin-bottom:8px">☁️ 云同步（可选）</div>
+          <div style="font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:8px">配置 Firebase 后，论坛留言可在所有人之间实时同步。不配置则仅保存在本地。</div>
+          <div id="firebase-status" style="font-size:14px;margin-bottom:8px"></div>
+          <textarea id="firebase-config-input" placeholder='粘贴 Firebase 配置 JSON...' style="width:100%;min-height:80px;font-size:13px;font-family:monospace;border:1px solid var(--border);border-radius:10px;padding:10px;resize:none;-webkit-appearance:none"></textarea>
+          <button style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;-webkit-appearance:none" onclick="saveFirebaseConfig()">保存配置</button>
+        </div>
+      </div>
       <div class="card" id="trip-info"></div>
       <div class="card">
         <div class="setting-row"><span>版本</span><span class="setting-value">1.0.0 (Web)</span></div>
@@ -237,6 +310,7 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
 <div class="tab-bar">
   <button class="tab-item" onclick="switchTab('map')"><span class="icon">🗺️</span>地图</button>
   <button class="tab-item active" onclick="switchTab('itinerary')"><span class="icon">🗓️</span>行程</button>
+  <button class="tab-item" onclick="switchTab('forum')"><span class="icon">💬</span>论坛</button>
   <button class="tab-item" onclick="switchTab('poi')"><span class="icon">📍</span>附近</button>
   <button class="tab-item" onclick="switchTab('settings')"><span class="icon">⚙️</span>设置</button>
 </div>
@@ -246,6 +320,33 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
 <div class="detail-overlay" id="detail-overlay">
   <button class="detail-back" onclick="closeDetail()">‹ 返回行程</button>
   <div id="detail-body"></div>
+</div>
+
+<!-- Compose Overlay -->
+<div class="compose-overlay" id="compose-overlay">
+  <div class="compose-header">
+    <button class="compose-cancel" onclick="closeCompose()">取消</button>
+    <span style="font-size:18px;font-weight:700">发表留言</span>
+    <button class="compose-send" id="compose-send-btn" onclick="sendComment()" disabled>发送</button>
+  </div>
+  <div class="compose-body">
+    <textarea class="compose-textarea" id="compose-text" placeholder="分享你的见闻、提醒、推荐…" oninput="document.getElementById('compose-send-btn').disabled=!this.value.trim()"></textarea>
+    <div class="compose-tag-section">
+      <div class="compose-tag-label">📍 标记位置（可选）</div>
+      <div class="compose-tag-grid" id="compose-tags"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Nickname Modal -->
+<div class="nickname-modal" id="nickname-modal">
+  <div class="nickname-box">
+    <div style="font-size:40px;margin-bottom:8px">👋</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px">欢迎来到论坛</div>
+    <div style="font-size:15px;color:var(--text2)">给自己取个昵称吧</div>
+    <input class="nickname-input" id="nickname-input" placeholder="你的昵称" maxlength="12">
+    <button class="nickname-submit" onclick="saveNickname()">开始聊天 🎉</button>
+  </div>
 </div>
 
 <!-- Stop Detail Overlay -->
@@ -314,10 +415,12 @@ function switchTab(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const tabs=['map','itinerary','poi','settings'];
+  const tabs=['map','itinerary','forum','poi','settings'];
   document.querySelectorAll('.tab-item')[tabs.indexOf(name)].classList.add('active');
   if(name==='map')initMap();
   if(name==='itinerary'){renderDayList();renderCountdown();}
+  if(name==='forum'){renderForum();document.getElementById('compose-fab').classList.add('show');}
+  else{document.getElementById('compose-fab').classList.remove('show');}
   if(name==='poi')renderPOIs();
   if(name==='settings')renderTripInfo();
   if(name!=='map')document.querySelector('.tab-content').scrollTop=0;
@@ -558,15 +661,237 @@ function renderTripInfo(){
     <div class="setting-row"><span>返回</span><span class="setting-value">2026年7月12日</span></div>`;
   hotels.forEach(h=>{html+=`<div style="font-size:14px;color:var(--text2);padding:2px 0 2px 16px">🏨 ${h}</div>`;});
   document.getElementById('trip-info').innerHTML=html;
+  // Update settings UI
+  const nickEl=document.getElementById('setting-nickname');
+  if(nickEl)nickEl.textContent=myNickname||'未设置';
+  const fbStatus=document.getElementById('firebase-status');
+  if(fbStatus)fbStatus.innerHTML=FB_CONFIG?'<span style="color:#27ae60">✅ 已配置</span>':'<span style="color:var(--text3)">未配置</span>';
+  const fbInput=document.getElementById('firebase-config-input');
+  if(fbInput&&FB_CONFIG)fbInput.value=FB_CONFIG;
 }
+
+function saveFirebaseConfig(){
+  const val=document.getElementById('firebase-config-input').value.trim();
+  if(!val){alert('请粘贴 Firebase 配置');return;}
+  try{const cfg=JSON.parse(val);if(!cfg.apiKey||!cfg.projectId){alert('配置格式不正确，需要 apiKey 和 projectId');return;}
+  localStorage.setItem('ys_firebase_config',val);alert('配置已保存，刷新页面生效');location.reload();}
+  catch(e){alert('JSON 格式错误，请检查');}
+}
+
+// ===== FORUM =====
+let forumFilter='all',myNickname=localStorage.getItem('ys_nickname')||'';
+const FORUM_STORAGE_KEY='ys_forum_comments';
+const FORUM_QUEUE_KEY='ys_forum_queue';
+
+function getComments(){try{return JSON.parse(localStorage.getItem(FORUM_STORAGE_KEY)||'[]');}catch(e){return[];}}
+function saveComments(c){localStorage.setItem(FORUM_STORAGE_KEY,JSON.stringify(c));}
+function getQueue(){try{return JSON.parse(localStorage.getItem(FORUM_QUEUE_KEY)||'[]');}catch(e){return[];}}
+function saveQueue(q){localStorage.setItem(FORUM_QUEUE_KEY,JSON.stringify(q));}
+
+function renderForum(){
+  // Filters
+  let fHtml=`<button class="forum-chip ${forumFilter==='all'?'active':''}" onclick="setForumFilter('all')">全部</button>`;
+  fHtml+=`<button class="forum-chip ${forumFilter==='general'?'active':''}" onclick="setForumFilter('general')">💬 闲聊</button>`;
+  ITINERARY.forEach(d=>{
+    fHtml+=`<button class="forum-chip ${forumFilter==='day'+d.dayNumber?'active':''}" onclick="setForumFilter('day${d.dayNumber}')">D${d.dayNumber}</button>`;
+  });
+  document.getElementById('forum-filters').innerHTML=fHtml;
+
+  const comments=getComments().sort((a,b)=>b.timestamp-a.timestamp);
+  const filtered=forumFilter==='all'?comments:comments.filter(c=>c.tag===forumFilter);
+
+  if(filtered.length===0){
+    document.getElementById('forum-list').innerHTML=`<div class="comment-empty"><div class="big-icon">💬</div><div style="font-size:20px;font-weight:600;margin-bottom:8px">${forumFilter==='all'?'还没有留言':'该分类暂无留言'}</div><div>点击右下角 ✏️ 发表第一条留言吧！</div></div>`;
+    return;
+  }
+  let html='';
+  filtered.forEach(c=>{
+    const tagLabel=getTagLabel(c.tag);
+    const timeStr=formatCommentTime(c.timestamp);
+    const pending=c.pending?'<span style="font-size:11px;color:var(--orange);margin-left:6px">⏳ 待同步</span>':'';
+    const reactions=renderReactions(c);
+    html+=`<div class="comment-card"><div style="display:flex;align-items:center"><span class="comment-author">${escHtml(c.author)}</span>${tagLabel?`<span class="comment-tag">${tagLabel}</span>`:''}<span class="comment-time">${timeStr}</span>${pending}</div><div class="comment-text">${escHtml(c.text)}</div>${c.location?`<div class="comment-location">📍 ${escHtml(c.location)}</div>`:''}${reactions}</div>`;
+  });
+  document.getElementById('forum-list').innerHTML=html;
+}
+
+function renderReactions(c){
+  const rid=c.id;
+  const myReactions=JSON.parse(localStorage.getItem('ys_my_reactions')||'{}');
+  const emojis=['👍','❤️','😂','🐻','🦬'];
+  let html='<div class="comment-reactions">';
+  emojis.forEach(e=>{
+    const count=(c.reactions&&c.reactions[e])||0;
+    const reacted=myReactions[rid+e];
+    html+=`<button class="react-btn ${reacted?'reacted':''}" onclick="toggleReaction('${rid}','${e}')">${e}${count>0?' '+count:''}</button>`;
+  });
+  html+='</div>';
+  return html;
+}
+
+function toggleReaction(commentId,emoji){
+  const myReactions=JSON.parse(localStorage.getItem('ys_my_reactions')||'{}');
+  const key=commentId+emoji;
+  const comments=getComments();
+  const c=comments.find(x=>x.id===commentId);
+  if(!c)return;
+  if(!c.reactions)c.reactions={};
+  if(myReactions[key]){delete myReactions[key];c.reactions[emoji]=Math.max(0,(c.reactions[emoji]||0)-1);}
+  else{myReactions[key]=true;c.reactions[emoji]=(c.reactions[emoji]||0)+1;}
+  localStorage.setItem('ys_my_reactions',JSON.stringify(myReactions));
+  saveComments(comments);
+  renderForum();
+}
+
+function getTagLabel(tag){
+  if(!tag||tag==='general')return '💬 闲聊';
+  if(tag.startsWith('day')){const n=parseInt(tag.replace('day',''));const d=ITINERARY.find(x=>x.dayNumber===n);return d?`D${n} ${d.title.substring(0,8)}`:tag;}
+  return tag;
+}
+
+function formatCommentTime(ts){
+  const d=new Date(ts),now=new Date(),diff=now-d;
+  if(diff<60000)return '刚刚';
+  if(diff<3600000)return Math.floor(diff/60000)+'分钟前';
+  if(diff<86400000)return Math.floor(diff/3600000)+'小时前';
+  if(diff<604800000)return Math.floor(diff/86400000)+'天前';
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function setForumFilter(f){forumFilter=f;renderForum();}
+
+function openCompose(keepText){
+  if(!myNickname){document.getElementById('nickname-modal').classList.add('show');return;}
+  renderComposeTags();
+  if(!keepText){document.getElementById('compose-text').value='';document.getElementById('compose-send-btn').disabled=true;}
+  document.getElementById('compose-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('compose-text').focus(),100);
+}
+function renderComposeTags(){
+  let tHtml=`<button class="compose-tag ${composeTag==='general'?'selected':''}" onclick="setComposeTag('general')">💬 闲聊</button>`;
+  ITINERARY.forEach(d=>{
+    tHtml+=`<button class="compose-tag ${composeTag==='day'+d.dayNumber?'selected':''}" onclick="setComposeTag('day${d.dayNumber}')">D${d.dayNumber} ${d.title.substring(0,6)}</button>`;
+  });
+  document.getElementById('compose-tags').innerHTML=tHtml;
+}
+function closeCompose(){document.getElementById('compose-overlay').classList.remove('show');}
+let composeTag='general';
+function setComposeTag(t){composeTag=t;renderComposeTags();}
+
+function saveNickname(){
+  const name=document.getElementById('nickname-input').value.trim();
+  if(!name)return;
+  myNickname=name;
+  localStorage.setItem('ys_nickname',name);
+  document.getElementById('nickname-modal').classList.remove('show');
+  openCompose();
+}
+
+function sendComment(){
+  const text=document.getElementById('compose-text').value.trim();
+  if(!text||!myNickname)return;
+  const comment={
+    id:'c_'+Date.now()+'_'+Math.random().toString(36).substr(2,6),
+    author:myNickname,
+    text:text,
+    tag:composeTag,
+    timestamp:Date.now(),
+    location:null,
+    reactions:{},
+    pending:!navigator.onLine
+  };
+  if(userLat!==null){
+    const allStops=ITINERARY.flatMap(d=>d.stops);
+    let nearest=null,nearestDist=Infinity;
+    allStops.forEach(s=>{const d=distanceTo(s.latitude,s.longitude);if(d<nearestDist){nearestDist=d;nearest=s;}});
+    if(nearest&&nearestDist<5)comment.location=nearest.name+' 附近';
+  }
+  const comments=getComments();
+  comments.push(comment);
+  saveComments(comments);
+  if(comment.pending){const q=getQueue();q.push(comment);saveQueue(q);}
+  else{syncToFirebase(comment);}
+  closeCompose();
+  renderForum();
+}
+
+// ===== FIREBASE SYNC =====
+let db=null,firebaseReady=false;
+const FB_CONFIG=localStorage.getItem('ys_firebase_config');
+
+function initFirebase(){
+  if(!FB_CONFIG)return;
+  try{
+    const config=JSON.parse(FB_CONFIG);
+    firebase.initializeApp(config);
+    db=firebase.firestore();
+    db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    firebaseReady=true;
+    listenComments();
+    syncQueue();
+    updateSyncBadge();
+  }catch(e){console.warn('Firebase init failed:',e);}
+}
+
+function listenComments(){
+  if(!db)return;
+  db.collection('comments').orderBy('timestamp','desc').onSnapshot(snap=>{
+    const remote=[];
+    snap.forEach(doc=>{const d=doc.data();d.id=doc.id;d.pending=false;remote.push(d);});
+    const local=getComments().filter(c=>c.pending);
+    const remoteIds=new Set(remote.map(r=>r.id));
+    const merged=[...remote,...local.filter(c=>!remoteIds.has(c.id))];
+    saveComments(merged);
+    if(document.getElementById('page-forum').classList.contains('active'))renderForum();
+    updateSyncBadge();
+  },err=>{console.warn('Firestore listen error:',err);});
+}
+
+function syncToFirebase(comment){
+  if(!db)return;
+  const data={...comment};delete data.pending;delete data.id;
+  db.collection('comments').doc(comment.id).set(data).then(()=>{
+    const comments=getComments();
+    const c=comments.find(x=>x.id===comment.id);
+    if(c)c.pending=false;
+    saveComments(comments);
+    if(document.getElementById('page-forum').classList.contains('active'))renderForum();
+  }).catch(()=>{});
+}
+
+function syncQueue(){
+  if(!db)return;
+  const q=getQueue();
+  if(q.length===0)return;
+  q.forEach(c=>syncToFirebase(c));
+  saveQueue([]);
+}
+
+function updateSyncBadge(){
+  const el=document.getElementById('sync-badge');
+  if(!el)return;
+  const q=getQueue();
+  if(!FB_CONFIG){el.className='sync-status sync-offline';el.textContent='📱 本地模式';return;}
+  if(!navigator.onLine){el.className='sync-status sync-offline';el.textContent=`● 离线${q.length>0?' ('+q.length+'条待同步)':''}`;return;}
+  if(q.length>0){el.className='sync-status sync-syncing';el.textContent='↻ 同步中…';return;}
+  el.className='sync-status sync-online';el.textContent='● 已同步';
+}
+
+window.addEventListener('online',()=>{updateSyncBadge();if(firebaseReady)syncQueue();});
+window.addEventListener('offline',()=>{updateSyncBadge();});
 
 // ===== MAP LOADING =====
 let leafletReady=false;
 function onLeafletReady(){leafletReady=true;if(document.getElementById('page-map').classList.contains('active'))initMap();}
 
 // ===== INIT =====
-renderCountdown();renderDayList();initLocation();
+renderCountdown();renderDayList();initLocation();updateSyncBadge();
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async onload="onLeafletReady()"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" async onload="
+  var s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';s.async=true;s.onload=function(){initFirebase();};document.body.appendChild(s);
+"></script>
 </body>
 </html>
