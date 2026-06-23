@@ -838,7 +838,7 @@ function sendComment(){
 
 // ===== FIREBASE SYNC =====
 let db=null,firebaseReady=false;
-const FB_CONFIG=localStorage.getItem('ys_firebase_config');
+const FB_CONFIG=JSON.stringify({apiKey:"AIzaSyBVrkzdJCvxRn-aUcl7Pb8udfESVavw1hc",authDomain:"ys-trip.firebaseapp.com",projectId:"ys-trip",storageBucket:"ys-trip.firebasestorage.app",messagingSenderId:"776728949752",appId:"1:776728949752:web:d34f36ec6a7098d7cc9c0d"});
 
 function initFirebase(){
   if(!FB_CONFIG)return;
