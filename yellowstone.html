@@ -148,6 +148,10 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
 .setting-row:last-child{border-bottom:none}
 .setting-value{color:var(--text2);font-size:15px}
 .maps-tip{font-size:14px;color:var(--blue);background:rgba(41,128,239,.06);padding:12px;border-radius:12px;line-height:1.5;margin-top:12px}
+.cloud-sync-card{margin-top:16px;padding-top:16px;border-top:.5px solid var(--border)}
+.cloud-sync-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.cloud-sync-note{font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:8px}
+.cloud-sync-state{font-size:14px;display:flex;align-items:center;gap:6px}
 
 /* Forum Tab */
 .forum-header{display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px}
@@ -327,12 +331,10 @@ body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;backgro
         <div class="section-title">💬 吐槽设置</div>
         <div class="setting-row"><span>昵称</span><span class="setting-value" id="setting-nickname">未设置</span></div>
         <button style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--green);background:rgba(44,110,73,.06);color:var(--green);font-size:16px;font-weight:600;cursor:pointer;margin-top:8px;-webkit-appearance:none" onclick="document.getElementById('nickname-modal').classList.add('show')">修改昵称</button>
-        <div style="margin-top:16px;padding-top:16px;border-top:.5px solid var(--border)">
-          <div style="font-size:15px;font-weight:600;margin-bottom:8px">☁️ 云同步（可选）</div>
-          <div style="font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:8px">配置 Firebase 后，论坛留言可在所有人之间实时同步。不配置则仅保存在本地。</div>
+        <div class="cloud-sync-card">
+          <div class="cloud-sync-title">☁️ 云同步</div>
+          <div class="cloud-sync-note">论坛留言会自动在所有人之间实时同步，无需手动配置。</div>
           <div id="firebase-status" style="font-size:14px;margin-bottom:8px"></div>
-          <textarea id="firebase-config-input" placeholder='粘贴 Firebase 配置 JSON...' style="width:100%;min-height:80px;font-size:13px;font-family:monospace;border:1px solid var(--border);border-radius:10px;padding:10px;resize:none;-webkit-appearance:none"></textarea>
-          <button style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;-webkit-appearance:none" onclick="saveFirebaseConfig()">保存配置</button>
         </div>
       </div>
       <div class="card" id="trip-info"></div>
@@ -739,17 +741,7 @@ function renderTripInfo(){
   const nickEl=document.getElementById('setting-nickname');
   if(nickEl)nickEl.textContent=myNickname||'未设置';
   const fbStatus=document.getElementById('firebase-status');
-  if(fbStatus)fbStatus.innerHTML=FB_CONFIG?'<span style="color:#27ae60">✅ 已配置</span>':'<span style="color:var(--text3)">未配置</span>';
-  const fbInput=document.getElementById('firebase-config-input');
-  if(fbInput&&FB_CONFIG)fbInput.value=FB_CONFIG;
-}
-
-function saveFirebaseConfig(){
-  const val=document.getElementById('firebase-config-input').value.trim();
-  if(!val){alert('请粘贴 Firebase 配置');return;}
-  try{const cfg=JSON.parse(val);if(!cfg.apiKey||!cfg.projectId){alert('配置格式不正确，需要 apiKey 和 projectId');return;}
-  localStorage.setItem('ys_firebase_config',val);alert('配置已保存，刷新页面生效');location.reload();}
-  catch(e){alert('JSON 格式错误，请检查');}
+  if(fbStatus)fbStatus.innerHTML=getSyncStatusHtml();
 }
 
 // ===== FORUM =====
@@ -913,7 +905,7 @@ async function sendComment(){
     photos:photoUrls,
     location:null,
     reactions:{},
-    pending:!navigator.onLine&&!photoUrls.length
+    pending:!firebaseReady||!navigator.onLine
   };
   if(userLat!==null){
     const allStops=ITINERARY.flatMap(d=>d.stops);
@@ -924,8 +916,8 @@ async function sendComment(){
   const comments=getComments();
   comments.push(comment);
   saveComments(comments);
-  if(comment.pending){const q=getQueue();q.push(comment);saveQueue(q);}
-  else{syncToFirebase(comment);}
+  if(comment.pending)queueComment(comment);
+  else syncToFirebase(comment);
   pendingPhotos=[];
   sendBtn.textContent='发送';
   const wasStopCtx=currentStopContext;
@@ -995,21 +987,26 @@ function viewPhotoById(img){
 function closePhotoViewer(){document.getElementById('photo-viewer').classList.remove('show');}
 
 // ===== FIREBASE SYNC =====
-let db=null,firebaseReady=false;
-const FB_CONFIG=JSON.stringify({apiKey:"AIzaSyBVrkzdJCvxRn-aUcl7Pb8udfESVavw1hc",authDomain:"ys-trip.firebaseapp.com",projectId:"ys-trip",storageBucket:"ys-trip.firebasestorage.app",messagingSenderId:"776728949752",appId:"1:776728949752:web:d34f36ec6a7098d7cc9c0d"});
+let db=null,firebaseReady=false,firebaseError='';
+const FB_CONFIG={apiKey:"AIzaSyBVrkzdJCvxRn-aUcl7Pb8udfESVavw1hc",authDomain:"ys-trip.firebaseapp.com",projectId:"ys-trip",storageBucket:"ys-trip.firebasestorage.app",messagingSenderId:"776728949752",appId:"1:776728949752:web:d34f36ec6a7098d7cc9c0d"};
 
 function initFirebase(){
   if(!FB_CONFIG)return;
   try{
-    const config=JSON.parse(FB_CONFIG);
-    firebase.initializeApp(config);
+    if(!firebase.apps.length)firebase.initializeApp(FB_CONFIG);
     db=firebase.firestore();
     db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
     firebaseReady=true;
+    firebaseError='';
     listenComments();
     syncQueue();
     updateSyncBadge();
-  }catch(e){console.warn('Firebase init failed:',e);}
+  }catch(e){
+    firebaseReady=false;
+    firebaseError='云同步初始化失败';
+    console.warn('Firebase init failed:',e);
+    updateSyncBadge();
+  }
 }
 
 function listenComments(){
@@ -1023,37 +1020,86 @@ function listenComments(){
     saveComments(merged);
     if(document.getElementById('page-forum').classList.contains('active'))renderForum();
     updateSyncBadge();
-  },err=>{console.warn('Firestore listen error:',err);});
+  },err=>{
+    firebaseError='云同步连接失败';
+    console.warn('Firestore listen error:',err);
+    updateSyncBadge();
+  });
 }
 
 function syncToFirebase(comment){
-  if(!db)return;
+  if(!db){setLocalCommentPending(comment.id,true);queueComment(comment);updateSyncBadge();return Promise.resolve(false);}
   const data={...comment};delete data.pending;delete data.id;
-  db.collection('comments').doc(comment.id).set(data).then(()=>{
-    const comments=getComments();
-    const c=comments.find(x=>x.id===comment.id);
-    if(c)c.pending=false;
-    saveComments(comments);
+  return db.collection('comments').doc(comment.id).set(data).then(()=>{
+    setLocalCommentPending(comment.id,false);
     if(document.getElementById('page-forum').classList.contains('active'))renderForum();
-  }).catch(()=>{});
+    updateSyncBadge();
+    return true;
+  }).catch(err=>{
+    console.warn('Firestore sync error:',err);
+    setLocalCommentPending(comment.id,true);
+    queueComment(comment);
+    updateSyncBadge();
+    return false;
+  });
 }
 
-function syncQueue(){
+function setLocalCommentPending(commentId,isPending){
+  const comments=getComments();
+  const c=comments.find(x=>x.id===commentId);
+  if(c){
+    c.pending=isPending;
+    saveComments(comments);
+  }
+}
+
+function queueComment(comment){
+  const q=getQueue();
+  if(!q.some(c=>c.id===comment.id)){
+    const queued={...comment,pending:true};
+    q.push(queued);
+    saveQueue(q);
+  }
+}
+
+async function syncQueue(){
   if(!db)return;
   const q=getQueue();
   if(q.length===0)return;
-  q.forEach(c=>syncToFirebase(c));
-  saveQueue([]);
+  const failed=[];
+  for(const c of q){
+    const ok=await syncToFirebase(c);
+    if(!ok)failed.push(c);
+  }
+  saveQueue(failed);
+  updateSyncBadge();
 }
 
 function updateSyncBadge(){
   const el=document.getElementById('sync-badge');
   if(!el)return;
   const q=getQueue();
-  if(!FB_CONFIG){el.className='sync-status sync-offline';el.textContent='📱 本地模式';return;}
-  if(!navigator.onLine){el.className='sync-status sync-offline';el.textContent=`● 离线${q.length>0?' ('+q.length+'条待同步)':''}`;return;}
-  if(q.length>0){el.className='sync-status sync-syncing';el.textContent='↻ 同步中…';return;}
+  if(!FB_CONFIG){el.className='sync-status sync-offline';el.textContent='📱 本地模式';updateCloudSyncStatus();return;}
+  if(!navigator.onLine){el.className='sync-status sync-offline';el.textContent=`● 离线${q.length>0?' ('+q.length+'条待同步)':''}`;updateCloudSyncStatus();return;}
+  if(firebaseError){el.className='sync-status sync-offline';el.textContent='● 同步异常';updateCloudSyncStatus();return;}
+  if(!firebaseReady){el.className='sync-status sync-syncing';el.textContent='↻ 连接中…';updateCloudSyncStatus();return;}
+  if(q.length>0){el.className='sync-status sync-syncing';el.textContent='↻ 同步中…';updateCloudSyncStatus();return;}
   el.className='sync-status sync-online';el.textContent='● 已同步';
+  updateCloudSyncStatus();
+}
+
+function getSyncStatusHtml(){
+  const q=getQueue();
+  if(!navigator.onLine)return `<span style="color:var(--orange)">⏳ 当前离线，${q.length} 条留言待联网后同步</span>`;
+  if(firebaseError)return `<span style="color:var(--red)">⚠️ ${firebaseError}</span>`;
+  if(!firebaseReady)return '<span style="color:var(--blue)">↻ 正在连接云同步...</span>';
+  if(q.length>0)return `<span style="color:var(--blue)">↻ 正在同步 ${q.length} 条留言...</span>`;
+  return '<span style="color:#27ae60">✅ 云同步已开启</span>';
+}
+
+function updateCloudSyncStatus(){
+  const fbStatus=document.getElementById('firebase-status');
+  if(fbStatus)fbStatus.innerHTML=getSyncStatusHtml();
 }
 
 window.addEventListener('online',()=>{updateSyncBadge();if(firebaseReady)syncQueue();});
@@ -1067,9 +1113,8 @@ function onLeafletReady(){leafletReady=true;if(document.getElementById('page-map
 renderCountdown();renderDayList();initLocation();updateSyncBadge();
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async onload="onLeafletReady()"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" async onload="
-  var s1=document.createElement('script');s1.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';s1.async=true;s1.onload=function(){initFirebase();};document.body.appendChild(s1);
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" async onerror="firebaseError='云同步脚本加载失败';updateSyncBadge();" onload="
+  var s1=document.createElement('script');s1.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';s1.async=true;s1.onerror=function(){firebaseError='云同步脚本加载失败';updateSyncBadge();};s1.onload=function(){initFirebase();};document.body.appendChild(s1);
 "></script>
 </body>
 </html>
-<!-- Tue Jun 23 09:37:35 PDT 2026 -->
